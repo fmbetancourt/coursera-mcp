@@ -71,6 +71,6 @@ export function sanitizeForLogging(
 
 export function createSanitizer() {
   return function (info: Record<string, unknown>): Record<string, unknown> {
-    return sanitizeForLogging(info);
+    return sanitizeForLogging(info) as Record<string, unknown>;
   };
 }

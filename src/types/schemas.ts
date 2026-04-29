@@ -1,10 +1,12 @@
 import { z } from 'zod';
 
 // Level and Language enums
-const LevelSchema = z.enum(['beginner', 'intermediate', 'advanced', 'professional']);
-const LanguageSchema = z.enum(['en', 'es', 'fr', 'de', 'zh', 'ja', 'pt', 'ru']);
-const CourseStatusSchema = z.enum(['enrolled', 'completed', 'dropped']);
-const ProgramTypeSchema = z.enum(['specialization', 'degree', 'certificate', 'professional-certificate']);
+const LevelSchema = z.enum(['beginner', 'intermediate', 'advanced', 'professional'] as const);
+const LanguageSchema = z.enum(['en', 'es', 'fr', 'de', 'zh', 'ja', 'pt', 'ru'] as const);
+const CourseStatusSchema = z.enum(['enrolled', 'completed', 'dropped'] as const);
+const ProgramTypeSchema = z.enum(
+  ['specialization', 'degree', 'certificate', 'professional-certificate'] as const
+);
 
 // Instructor schema
 export const InstructorSchema = z.object({
@@ -39,7 +41,7 @@ export const CourseSchema = z.object({
   reviewCount: z.number().min(0).optional(),
 });
 
-export type CourseType = z.infer<typeof CourseSchema>;
+export type Course = z.infer<typeof CourseSchema>;
 
 // Program schema
 export const ProgramSchema = z.object({
@@ -54,7 +56,7 @@ export const ProgramSchema = z.object({
   partnerUniversity: z.string().optional(),
 });
 
-export type ProgramType = z.infer<typeof ProgramSchema>;
+export type Program = z.infer<typeof ProgramSchema>;
 
 // User schema
 export const UserSchema = z.object({
@@ -67,7 +69,7 @@ export const UserSchema = z.object({
   bio: z.string().optional(),
 });
 
-export type UserType = z.infer<typeof UserSchema>;
+export type User = z.infer<typeof UserSchema>;
 
 // Enrolled course schema
 export const EnrolledCourseSchema = z.object({
@@ -78,7 +80,7 @@ export const EnrolledCourseSchema = z.object({
   completionDate: z.coerce.date().optional(),
 });
 
-export type EnrolledCourseType = z.infer<typeof EnrolledCourseSchema>;
+export type EnrolledCourse = z.infer<typeof EnrolledCourseSchema>;
 
 // Certificate schema
 export const CertificateSchema = z.object({
@@ -89,7 +91,7 @@ export const CertificateSchema = z.object({
   certificateUrl: z.string().url(),
 });
 
-export type CertificateType = z.infer<typeof CertificateSchema>;
+export type Certificate = z.infer<typeof CertificateSchema>;
 
 // Deadline schema
 export const DeadlineSchema = z.object({
@@ -111,7 +113,7 @@ export const ProgressSchema = z.object({
   lastAccessedDate: z.coerce.date(),
 });
 
-export type ProgressType = z.infer<typeof ProgressSchema>;
+export type Progress = z.infer<typeof ProgressSchema>;
 
 // Search parameters schemas
 export const SearchCourseParamsSchema = z.object({
@@ -124,7 +126,7 @@ export const SearchCourseParamsSchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 });
 
-export type SearchCourseParamsType = z.infer<typeof SearchCourseParamsSchema>;
+export type SearchCourseParams = z.infer<typeof SearchCourseParamsSchema>;
 
 export const SearchProgramParamsSchema = z.object({
   query: z.string().optional(),
@@ -135,7 +137,7 @@ export const SearchProgramParamsSchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 });
 
-export type SearchProgramParamsType = z.infer<typeof SearchProgramParamsSchema>;
+export type SearchProgramParams = z.infer<typeof SearchProgramParamsSchema>;
 
 // API Response schema
 export const ApiResponseSchema = z.object({
@@ -157,4 +159,4 @@ export const CourseraErrorSchema = z.object({
   details: z.record(z.unknown()).optional(),
 });
 
-export type CourseraErrorType = z.infer<typeof CourseraErrorSchema>;
+export type CourseraErrorResponse = z.infer<typeof CourseraErrorSchema>;
