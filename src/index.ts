@@ -2,7 +2,10 @@ import { logger } from './utils/logger';
 import { CourseraClient } from './services/courseraClient';
 import { CacheService } from './services/cache';
 import { AuthService } from './services/auth';
+import { searchCourses, searchPrograms } from './tools/search';
+import { getCourseDetails, getProgramDetails } from './tools/details';
 import path from 'path';
+import type { SearchCourseParams, SearchProgramParams } from './types/schemas';
 
 // Initialize services
 const courseraClient = new CourseraClient();
@@ -15,15 +18,38 @@ logger.info('Coursera MCP services initialized', {
   services: ['CourseraClient', 'CacheService', 'AuthService'],
 });
 
-// Tool handler stubs
+// Tool handlers
 export const toolHandlers = {
-  search_courses: () => 'search_courses not yet implemented',
-  search_programs: () => 'search_programs not yet implemented',
-  get_course_details: () => 'get_course_details not yet implemented',
-  get_program_details: () => 'get_program_details not yet implemented',
-  get_enrolled_courses: () => 'get_enrolled_courses not yet implemented',
-  get_progress: () => 'get_progress not yet implemented',
-  get_recommendations: () => 'get_recommendations not yet implemented',
+  search_courses: async (params: SearchCourseParams & { query: string }) => {
+    return searchCourses(courseraClient, cache, params);
+  },
+
+  search_programs: async (params: SearchProgramParams & { query: string }) => {
+    return searchPrograms(courseraClient, cache, params);
+  },
+
+  get_course_details: async (courseId: string) => {
+    return getCourseDetails(courseraClient, cache, courseId);
+  },
+
+  get_program_details: async (programId: string) => {
+    return getProgramDetails(courseraClient, cache, programId);
+  },
+
+  get_enrolled_courses: () => {
+    logger.warn('Tool not yet implemented: get_enrolled_courses (requires Fase 3)');
+    throw new Error('get_enrolled_courses not yet implemented');
+  },
+
+  get_progress: () => {
+    logger.warn('Tool not yet implemented: get_progress (requires Fase 3)');
+    throw new Error('get_progress not yet implemented');
+  },
+
+  get_recommendations: () => {
+    logger.warn('Tool not yet implemented: get_recommendations (requires Fase 3)');
+    throw new Error('get_recommendations not yet implemented');
+  },
 };
 
 // Global error handlers
