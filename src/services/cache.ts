@@ -7,6 +7,7 @@ interface CacheEntry<T> {
   data: T;
   expiresAt: number;
   createdAt: number;
+  key?: string;
 }
 
 export class CacheService {
@@ -34,6 +35,7 @@ export class CacheService {
       data,
       expiresAt,
       createdAt: Date.now(),
+      key,
     };
 
     // Store in memory
@@ -163,7 +165,8 @@ export class CacheService {
 
           // Only load if not expired
           if (Date.now() <= entry.expiresAt) {
-            const key = file.replace('.json', '');
+            // Use the stored key if available, otherwise use the filename
+            const key = entry.key || file.replace('.json', '');
             this.memoryCache.set(key, entry);
           } else {
             fs.removeSync(filePath);
