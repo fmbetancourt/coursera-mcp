@@ -658,16 +658,16 @@ Todos los comandos de test en este documento usan `bun test`.
 - [x] T1.18: Retry tests
 - [x] T1.19: CircuitBreaker tests
 - [x] T1.20: Cache tests
-- [ ] T1.21: EncryptionService
-- [ ] T1.22: AuthService (TOTP)
-- [ ] T1.23: Encryption tests
-- [ ] T1.24: Auth TOTP tests
-- [ ] T1.25: HTTP+Cache integration
-- [ ] T1.26: Auth flow integration
-- [ ] T1.27: CircuitBreaker integration
-- [ ] T1.28: Parser Service
-- [ ] T1.29: Parser tests
-- [ ] T1.30: MCP Server base
+- [x] T1.21: EncryptionService
+- [x] T1.22: AuthService (TOTP)
+- [x] T1.23: Encryption tests
+- [x] T1.24: Auth TOTP tests
+- [x] T1.25: HTTP+Cache integration
+- [x] T1.26: Auth flow integration
+- [x] T1.27: CircuitBreaker integration
+- [x] T1.28: Parser Service
+- [x] T1.29: Parser tests
+- [x] T1.30: MCP Server base
 
 **Criterio de éxito Fase 1**: `bun test` muestra 50+ tests pasando, coverage >85%
 
