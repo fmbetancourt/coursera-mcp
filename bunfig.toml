@@ -1,0 +1,16 @@
+# Bun configuration for the coursera-mcp project
+
+[test]
+# Glob patterns for test files - bun test auto-discovers these
+# Bun looks for: **/*.test.ts, **/*.test.tsx, **/*.spec.ts, **/*.spec.tsx
+root = "tests"
+preload = ["./tests/setup.ts"]
+
+[build]
+# ESBuild configuration for bun build
+target = "browser"
+entrypoints = ["./src/index.ts"]
+
+[install]
+# Installation preferences
+optional = true

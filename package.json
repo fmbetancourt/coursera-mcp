@@ -36,8 +36,29 @@
     "README.md",
     "LICENSE"
   ],
-  "dependencies": {},
-  "devDependencies": {},
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.0",
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12",
+    "dotenv": "^16.3.1",
+    "fs-extra": "^11.2.0",
+    "speakeasy": "^2.0.0",
+    "winston": "^3.11.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^20.10.6",
+    "@types/speakeasy": "^2.0.10",
+    "@typescript-eslint/eslint-plugin": "^6.17.0",
+    "@typescript-eslint/parser": "^6.17.0",
+    "esbuild": "^0.19.11",
+    "eslint": "^8.56.0",
+    "husky": "^8.0.3",
+    "nock": "^13.4.0",
+    "prettier": "^3.1.1",
+    "typescript": "^5.3.3"
+  },
   "scripts": {
     "build": "tsc && esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js",
     "dev": "tsc --watch",
