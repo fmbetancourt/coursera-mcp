@@ -638,26 +638,26 @@ Todos los comandos de test en este documento usan `bun test`.
 
 ## Checklist Fase 1
 
-- [ ] T1.1: Estructura de proyecto y git
-- [ ] T1.2: package.json + dependencies
-- [ ] T1.3: TypeScript config
-- [ ] T1.4: ESLint + Prettier
-- [ ] T1.5: vitest config
-- [ ] T1.6: .env + config
-- [ ] T1.7: Tipos de Coursera
-- [ ] T1.8: Zod schemas
-- [ ] T1.9: Error types
-- [ ] T1.10: Logger (Winston)
-- [ ] T1.11: Retry logic
-- [ ] T1.12: Circuit breaker
-- [ ] T1.13: Fixtures
-- [ ] T1.14: CourseraClient
-- [ ] T1.15: CacheService
-- [ ] T1.16: AuthService base
-- [ ] T1.17: Logger tests
-- [ ] T1.18: Retry tests
-- [ ] T1.19: CircuitBreaker tests
-- [ ] T1.20: Cache tests
+- [x] T1.1: Estructura de proyecto y git
+- [x] T1.2: package.json + dependencies
+- [x] T1.3: TypeScript config
+- [x] T1.4: ESLint + Prettier
+- [x] T1.5: vitest config
+- [x] T1.6: .env + config
+- [x] T1.7: Tipos de Coursera
+- [x] T1.8: Zod schemas
+- [x] T1.9: Error types
+- [x] T1.10: Logger (Winston)
+- [x] T1.11: Retry logic
+- [x] T1.12: Circuit breaker
+- [x] T1.13: Fixtures
+- [x] T1.14: CourseraClient
+- [x] T1.15: CacheService
+- [x] T1.16: AuthService base
+- [x] T1.17: Logger tests
+- [x] T1.18: Retry tests
+- [x] T1.19: CircuitBreaker tests
+- [x] T1.20: Cache tests
 - [ ] T1.21: EncryptionService
 - [ ] T1.22: AuthService (TOTP)
 - [ ] T1.23: Encryption tests
