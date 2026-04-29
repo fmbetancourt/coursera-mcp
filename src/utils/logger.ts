@@ -1,7 +1,7 @@
 import winston from 'winston';
 import fs from 'fs-extra';
 import path from 'path';
-import { createSanitizer } from './logSanitizer';
+import { sanitizeForLogging } from './logSanitizer';
 
 const logsDir = path.join(process.env.HOME || '~', '.coursera-mcp');
 
@@ -16,16 +16,10 @@ const logFormat = winston.format.combine(
   winston.format.errors({ stack: true }),
   winston.format.splat(),
   winston.format.printf(({ timestamp, level, message, ...rest }) => {
-    return JSON.stringify({
-      timestamp,
-      level,
-      message,
-      ...rest,
-    });
+    const sanitized = sanitizeForLogging({ timestamp, level, message, ...rest });
+    return JSON.stringify(sanitized);
   })
 );
-
-const sanitizer = createSanitizer();
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
@@ -37,19 +31,11 @@ const logger = winston.createLogger({
       level: 'error',
       maxsize: 10485760, // 10MB
       maxFiles: 5,
-      format: winston.format.combine(
-        winston.format((info) => sanitizer(info as Record<string, unknown>)),
-        logFormat
-      ),
     }),
     new winston.transports.File({
       filename: path.join(logsDir, 'combined.log'),
       maxsize: 10485760, // 10MB
       maxFiles: 10,
-      format: winston.format.combine(
-        winston.format((info) => sanitizer(info as Record<string, unknown>)),
-        logFormat
-      ),
     }),
   ],
 });

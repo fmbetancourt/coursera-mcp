@@ -1,7 +1,10 @@
 import fs from 'fs-extra';
 import path from 'path';
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
 import { logger } from '../utils/logger';
 import { CourseraClient } from './courseraClient';
+import { EncryptionService } from './encryption';
 
 export interface Session {
   email: string;
@@ -16,13 +19,16 @@ export class AuthService {
   private courseraClient: CourseraClient;
   private sessionsPath: string;
   private sessions: Map<string, Session> = new Map();
+  private encryptionService: EncryptionService;
 
   constructor(
     courseraClient: CourseraClient,
+    masterPassword = 'default-master-key',
     sessionsPath = path.join(process.env.HOME || '~', '.coursera-mcp', 'sessions.json')
   ) {
     this.courseraClient = courseraClient;
     this.sessionsPath = sessionsPath;
+    this.encryptionService = new EncryptionService(masterPassword);
     this.loadSessions();
   }
 
@@ -123,5 +129,145 @@ export class AuthService {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+
+  // TOTP 2FA Methods
+
+  async generateTOTPSecret(email: string): Promise<{ secret: string; qrCode: string }> {
+    try {
+      const secret = speakeasy.generateSecret({
+        name: `Coursera MCP (${email})`,
+        issuer: 'Coursera MCP',
+        length: 32,
+      });
+
+      if (!secret.otpauth_url) {
+        throw new Error('Failed to generate TOTP secret');
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+      const qrCodeData = (await QRCode.toDataURL(secret.otpauth_url)) as string;
+
+      logger.info('TOTP secret generated', { email });
+
+      return {
+        secret: String(secret.base32),
+        qrCode: qrCodeData,
+      };
+    } catch (error) {
+      logger.error('Failed to generate TOTP secret', {
+        email,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  validateTOTPCode(secret: string, code: string): boolean {
+    try {
+      const isValid = speakeasy.totp.verify({
+        secret,
+        encoding: 'base32',
+        token: code,
+        window: 2, // Allow 2 time windows (±30 seconds)
+      });
+
+      return isValid;
+    } catch (error) {
+      logger.warn('TOTP validation error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
+  }
+
+  generateTOTPCode(secret: string): string {
+    try {
+      const code = speakeasy.totp({
+        secret,
+        encoding: 'base32',
+      });
+
+      return code;
+    } catch (error) {
+      logger.error('Failed to generate TOTP code', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  generateBackupCodes(count = 10): string[] {
+    try {
+      const codes: string[] = [];
+
+      for (let i = 0; i < count; i++) {
+        const code = `${Math.random().toString(36).substring(2, 10).toUpperCase()}-${Math.random()
+          .toString(36)
+          .substring(2, 10)
+          .toUpperCase()}`;
+        codes.push(code);
+      }
+
+      logger.info('Backup codes generated', { count });
+
+      return codes;
+    } catch (error) {
+      logger.error('Failed to generate backup codes', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  // Token Encryption Methods
+
+  encryptSessionToken(token: string): string {
+    return this.encryptionService.encrypt(token);
+  }
+
+  decryptSessionToken(encrypted: string): string {
+    return this.encryptionService.decrypt(encrypted);
+  }
+
+  verifyTOTPAndCreateSession(email: string, totpSecret: string, totpCode: string): string {
+    if (!this.validateTOTPCode(totpSecret, totpCode)) {
+      logger.warn('TOTP verification failed', { email });
+      throw new Error('Invalid TOTP code');
+    }
+
+    // Generate a mock session token (in production, get from API)
+    const sessionToken = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const encryptedToken = this.encryptSessionToken(sessionToken);
+
+    // Save encrypted session
+    this.saveSession(email, {
+      sessionToken: encryptedToken,
+      refreshToken: undefined,
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+      lastRefreshed: Date.now(),
+      totpEnabled: true,
+    });
+
+    logger.info('Session created after TOTP verification', { email });
+
+    return sessionToken;
+  }
+
+  refreshSession(email: string): void {
+    const session = this.loadSession(email);
+
+    if (!session) {
+      throw new Error('No session found');
+    }
+
+    // Update expiration
+    session.expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+    session.lastRefreshed = Date.now();
+
+    this.sessions.set(email, session);
+    this.saveSessions();
+
+    logger.info('Session refreshed', { email });
   }
 }
