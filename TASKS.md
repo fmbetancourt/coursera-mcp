@@ -879,12 +879,12 @@ Todos los comandos de test en este documento usan `bun test`.
 
 ## Checklist Fase 2
 
-- [ ] T2.1: search_courses implementado
-- [ ] T2.2: search_programs implementado
-- [ ] T2.3: Search tests
-- [ ] T2.4: get_course_details implementado
-- [ ] T2.5: get_program_details implementado
-- [ ] T2.6: Details tests
+- [x] T2.1: search_courses implementado
+- [x] T2.2: search_programs implementado
+- [x] T2.3: Search tests
+- [x] T2.4: get_course_details implementado
+- [x] T2.5: get_program_details implementado
+- [x] T2.6: Details tests
 - [ ] T2.7: Tools registrados en MCP
 - [ ] T2.8: E2E tests completos
 - [ ] T2.9: API.md creado
