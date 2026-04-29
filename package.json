@@ -1,0 +1,51 @@
+{
+  "name": "coursera-mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server integrating Coursera with Claude",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "coursera-mcp": "bin/coursera-mcp.js"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "bun": ">=1.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "coursera",
+    "claude",
+    "ai",
+    "learning",
+    "education",
+    "protocol"
+  ],
+  "author": "Freddy Betancourt <freddy.moreno@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/yourusername/coursera-mcp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/coursera-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/coursera-mcp/issues"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {
+    "build": "tsc && esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js",
+    "dev": "tsc --watch",
+    "test": "bun test",
+    "test:unit": "bun test tests/unit",
+    "test:integration": "bun test tests/integration",
+    "test:coverage": "bun test --coverage",
+    "lint": "eslint src --ext .ts --fix",
+    "type-check": "tsc --noEmit"
+  }
+}

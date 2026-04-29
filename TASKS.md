@@ -21,6 +21,18 @@ Cada tarea:
 
 ---
 
+## ⚠️ IMPORTANTE: Testing Framework
+
+**Este proyecto usa bun test nativo**, NO vitest.
+- ✅ Bun test: Jest-compatible, 2-3x más rápido, incluido en bun
+- ✅ Sintaxis: `bun test` (en lugar de `vitest`)
+- ✅ Importaciones: `import { describe, it, expect } from "bun:test"`
+- Ver: BUN_MIGRATION.md para detalles
+
+Todos los comandos de test en este documento usan `bun test`.
+
+---
+
 # 🔴 FASE 1: Fundamentos + Seguridad (Semanas 1-3)
 
 ## Setup Inicial
@@ -97,21 +109,21 @@ Cada tarea:
 - **Éxito**: Linting OK, formato consistente
 - **Referencias**: coursera-mcp-config.json
 
-### T1.5: Configurar vitest (vitest.config.ts)
+### T1.5: Configurar Bun Test (bun test nativo)
 - **Requisitos**: T1.3 completada
 - **Tiempo**: 30 min
 - **Prompt**:
   ```
-  Crear vitest.config.ts:
-  - test: { environment: 'node', coverage: { provider: 'v8', reporter: ['text', 'json'] } }
-  - alias: {'@': '/src'}
-  - include: ['tests/**/*.test.ts']
+  Configurar bun test nativo (no vitest):
+  - Crear bunfig.toml con test config (opcional, bun lo hace automático)
+  - Crear tests/setup.ts con utilidades comunes
+  - Bun test busca automáticamente: tests/**/*.test.ts, src/**/*.test.ts
   
-  Crear tests/setup.ts con utilidades comunes
-  Criterio: vitest run --help funciona, setup creado
+  Criterio: bun test --help funciona, setup.ts creado
   ```
-- **Éxito**: vitest configurado, setup.ts creado
-- **Referencias**: TESTING_STRATEGY.md
+- **Éxito**: Bun test configurado, setup.ts creado
+- **Referencias**: TESTING_STRATEGY.md, BUN_MIGRATION.md
+- **Nota**: Usamos bun test nativo (Jest-compatible, 2-3x más rápido que vitest)
 
 ### T1.6: Crear .env.example y variables de entorno
 - **Requisitos**: T1.1 completada
@@ -441,7 +453,9 @@ Cada tarea:
 - **Tiempo**: 2 horas
 - **Prompt**:
   ```
-  Extender src/services/auth.ts con TOTP:
+  Extender src/services/auth.ts con TOTP (NOTA: estos son métodos de servicio, NO comandos CLI):
+  - Los comandos CLI (como coursera-mcp init) se implementarán en T4.9
+  - Por ahora, crear métodos que los handlers CLI llamarán después
   - Importar speakeasy para TOTP
   - Métodos:
     - generateTOTPSecret(): return {secret, qrCode}
