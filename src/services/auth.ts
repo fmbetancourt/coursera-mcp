@@ -146,7 +146,7 @@ export class AuthService {
       }
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-      const qrCodeData = (await QRCode.toDataURL(secret.otpauth_url)) as string;
+      const qrCodeData = (await QRCode.toDataURL(secret.otpauth_url));
 
       logger.info('TOTP secret generated', { email });
 

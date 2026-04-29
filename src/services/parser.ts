@@ -3,17 +3,17 @@ import { logger } from '../utils/logger';
 import { sanitizeForLogging } from '../utils/logSanitizer';
 import {
   CourseSchema,
-  CourseType,
+  Course,
   ProgramSchema,
-  ProgramType,
+  Program,
   UserSchema,
-  UserType,
+  User,
   ProgressSchema,
-  ProgressType,
+  Progress,
   EnrolledCourseSchema,
-  EnrolledCourseType,
+  EnrolledCourse,
   CertificateSchema,
-  CertificateType,
+  Certificate,
 } from '../types/schemas';
 
 export class ValidationError extends Error {
@@ -44,7 +44,7 @@ function handleZodError(error: z.ZodError, context: string): never {
   throw new ValidationError('unknown', 'Validation failed', `Invalid data in ${context}`);
 }
 
-export function parseCourse(raw: unknown): CourseType {
+export function parseCourse(raw: unknown): Course {
   try {
     return CourseSchema.parse(raw);
   } catch (err) {
@@ -55,7 +55,7 @@ export function parseCourse(raw: unknown): CourseType {
   }
 }
 
-export function parseCourses(raw: unknown[]): CourseType[] {
+export function parseCourses(raw: unknown[]): Course[] {
   try {
     return raw.map((item) => parseCourse(item));
   } catch (err) {
@@ -67,7 +67,7 @@ export function parseCourses(raw: unknown[]): CourseType[] {
   }
 }
 
-export function parseProgram(raw: unknown): ProgramType {
+export function parseProgram(raw: unknown): Program {
   try {
     return ProgramSchema.parse(raw);
   } catch (err) {
@@ -78,7 +78,7 @@ export function parseProgram(raw: unknown): ProgramType {
   }
 }
 
-export function parsePrograms(raw: unknown[]): ProgramType[] {
+export function parsePrograms(raw: unknown[]): Program[] {
   try {
     return raw.map((item) => parseProgram(item));
   } catch (err) {
@@ -90,7 +90,7 @@ export function parsePrograms(raw: unknown[]): ProgramType[] {
   }
 }
 
-export function parseUser(raw: unknown): UserType {
+export function parseUser(raw: unknown): User {
   try {
     return UserSchema.parse(raw);
   } catch (err) {
@@ -101,7 +101,7 @@ export function parseUser(raw: unknown): UserType {
   }
 }
 
-export function parseUsers(raw: unknown[]): UserType[] {
+export function parseUsers(raw: unknown[]): User[] {
   try {
     return raw.map((item) => parseUser(item));
   } catch (err) {
@@ -113,7 +113,7 @@ export function parseUsers(raw: unknown[]): UserType[] {
   }
 }
 
-export function parseProgress(raw: unknown): ProgressType {
+export function parseProgress(raw: unknown): Progress {
   try {
     return ProgressSchema.parse(raw);
   } catch (err) {
@@ -124,7 +124,7 @@ export function parseProgress(raw: unknown): ProgressType {
   }
 }
 
-export function parseEnrolledCourse(raw: unknown): EnrolledCourseType {
+export function parseEnrolledCourse(raw: unknown): EnrolledCourse {
   try {
     return EnrolledCourseSchema.parse(raw);
   } catch (err) {
@@ -135,7 +135,7 @@ export function parseEnrolledCourse(raw: unknown): EnrolledCourseType {
   }
 }
 
-export function parseEnrolledCourses(raw: unknown[]): EnrolledCourseType[] {
+export function parseEnrolledCourses(raw: unknown[]): EnrolledCourse[] {
   try {
     return raw.map((item) => parseEnrolledCourse(item));
   } catch (err) {
@@ -147,7 +147,7 @@ export function parseEnrolledCourses(raw: unknown[]): EnrolledCourseType[] {
   }
 }
 
-export function parseCertificate(raw: unknown): CertificateType {
+export function parseCertificate(raw: unknown): Certificate {
   try {
     return CertificateSchema.parse(raw);
   } catch (err) {
@@ -158,7 +158,7 @@ export function parseCertificate(raw: unknown): CertificateType {
   }
 }
 
-export function parseCertificates(raw: unknown[]): CertificateType[] {
+export function parseCertificates(raw: unknown[]): Certificate[] {
   try {
     return raw.map((item) => parseCertificate(item));
   } catch (err) {
