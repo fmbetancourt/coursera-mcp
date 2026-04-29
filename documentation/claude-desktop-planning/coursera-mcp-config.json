@@ -1,0 +1,219 @@
+// package.json
+
+{
+  "name": "coursera-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Coursera - Search courses, track progress, explore programs",
+  "type": "module",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js"
+    },
+    "./services": {
+      "import": "./dist/services/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src --fix",
+    "format": "prettier --write 'src/**/*.ts'",
+    "type-check": "tsc --noEmit",
+    "cache:inspect": "node -e \"const fs = require('fs'); const path = require('path'); const dir = process.env.COURSERA_CACHE_DIR || `${process.env.HOME}/.coursera-mcp`; const files = fs.readdirSync(path.join(dir, 'cache')); console.log('Cache entries:', files)\"",
+    "cache:clear": "rm -rf ~/.coursera-mcp/cache/* && echo 'Cache cleared'",
+    "start": "node dist/index.js"
+  },
+  "keywords": [
+    "claude",
+    "mcp",
+    "coursera",
+    "education",
+    "courses"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.20.0",
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12",
+    "dotenv": "^16.3.1",
+    "zod": "^3.22.4",
+    "winston": "^3.11.0",
+    "fs-extra": "^11.2.0"
+  },
+  "devDependencies": {
+    "@types/cheerio": "^0.22.33",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^20.10.5",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "@vitest/coverage-v8": "^1.1.0",
+    "eslint": "^8.56.0",
+    "prettier": "^3.1.1",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0",
+    "nock": "^13.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}
+
+// tsconfig.json
+
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ES2020",
+    "lib": ["ES2020"],
+    "moduleResolution": "bundler",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "baseUrl": "./src",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "paths": {
+      "@/*": ["./*"],
+      "@types/*": ["types/*"],
+      "@services/*": ["services/*"],
+      "@tools/*": ["tools/*"],
+      "@utils/*": ["utils/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "tests"]
+}
+
+// .env.example
+
+# Coursera Credentials
+COURSERA_EMAIL=your@email.com
+COURSERA_PASSWORD=your_password
+
+# Optional: Use existing session cookie instead of email/password
+# COURSERA_SESSION_COOKIE=your_session_cookie_value
+
+# Cache Configuration
+COURSERA_CACHE_DIR=~/.coursera-mcp
+COURSERA_CACHE_ENABLED=true
+
+# API Configuration
+COURSERA_API_BASE_URL=https://www.coursera.org
+COURSERA_API_TIMEOUT=10000
+
+# Logging
+DEBUG=coursera-mcp:*
+LOG_LEVEL=info
+
+# Network
+HTTP_TIMEOUT=15000
+MAX_RETRIES=3
+INITIAL_RETRY_DELAY_MS=1000
+
+// .eslintrc.json
+
+{
+  "env": {
+    "node": true,
+    "es2020": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-requiring-type-checking"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module",
+    "project": "./tsconfig.json"
+  },
+  "plugins": ["@typescript-eslint"],
+  "rules": {
+    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "@typescript-eslint/explicit-function-return-types": "warn",
+    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/no-floating-promises": "warn",
+    "prefer-const": "error",
+    "no-var": "error"
+  }
+}
+
+// prettier.config.json
+
+{
+  "semi": false,
+  "singleQuote": true,
+  "trailingComma": "es5",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "arrowParens": "always"
+}
+
+// .gitignore
+
+# Dependencies
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+
+# Build output
+dist/
+*.js
+*.d.ts
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Cache
+.coursera-mcp/
+~/.coursera-mcp/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Misc
+.cache/
+.tmp/
