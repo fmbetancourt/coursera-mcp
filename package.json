@@ -65,7 +65,8 @@
     "typescript": "^5.3.3"
   },
   "scripts": {
-    "build": "tsc && esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js",
+    "build": "tsc && esbuild src/index.ts --bundle --platform=node --target=node18 --minify --sourcemap --outfile=dist/index.js && echo 'Build complete: dist/index.js'",
+    "build:watch": "tsc --watch & esbuild src/index.ts --bundle --platform=node --target=node18 --sourcemap --outfile=dist/index.js --watch",
     "dev": "tsc --watch",
     "test": "bun test",
     "test:unit": "bun test tests/unit",

@@ -1438,7 +1438,7 @@ Todos los comandos de test en este documento usan `bun test`.
 - [x] T4.5: DEVELOPMENT.md
 - [x] T4.6: README.md
 - [x] T4.7: SECURITY_USERS.md
-- [ ] T4.8: esbuild setup
+- [x] T4.8: esbuild setup
 - [ ] T4.9: CLI binario
 - [ ] T4.10: E2E user flow
 - [ ] T4.11: Performance check
