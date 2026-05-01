@@ -1441,13 +1441,13 @@ Todos los comandos de test en este documento usan `bun test`.
 - [x] T4.8: esbuild setup
 - [x] T4.9: CLI binario
 - [x] T4.10: E2E user flow
-- [ ] T4.11: Performance check
-- [ ] T4.12: Security audit
-- [ ] T4.13: CHANGELOG.md
-- [ ] T4.14: npm publish ready
-- [ ] T4.15: Claude Desktop setup
-- [ ] T4.16: GitHub Release
-- [ ] T4.17: v1.1 roadmap issues
+- [x] T4.11: Performance check
+- [x] T4.12: Security audit
+- [x] T4.13: CHANGELOG.md
+- [x] T4.14: npm publish ready
+- [x] T4.15: Claude Desktop setup
+- [x] T4.16: GitHub Release
+- [x] T4.17: v1.1 roadmap issues
 
 **Criterio de éxito Fase 4**: Release v0.1.0 en npm, GitHub, y Claude Desktop
 
