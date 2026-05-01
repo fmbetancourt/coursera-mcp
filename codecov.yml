@@ -1,0 +1,54 @@
+codecov:
+  require_ci_to_pass: true
+  precision: 2
+  max_report_age: 24
+  assume_all_files: yes
+
+coverage:
+  precision: 2
+  round: down
+  range:
+    - 70.0
+    - 100.0
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 85%
+        base: auto
+        if_not_found: success
+        if_ci_failed: failure
+        only_pulls: false
+        flags:
+          - unittests
+    patch:
+      default:
+        target: auto
+        threshold: 80%
+        if_not_found: success
+        if_ci_failed: failure
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      partial: yes
+
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: yes
+  branches:
+    - main
+    - develop
+
+ignore:
+  - "tests"
+  - "**/*.test.ts"
+  - "**/*.spec.ts"
+  - "**/node_modules"
+  - "**/dist"
