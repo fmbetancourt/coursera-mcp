@@ -34,6 +34,25 @@ export function requireAuth(
     }
 
     const userId = activeSessions[0];
+
+    // Check if session is expiring soon (within 5 minutes)
+    if (authService.isSessionExpiringSoon(userId, 5)) {
+      logger.info('Session expiring soon, attempting auto-refresh', { userId });
+      try {
+        // Note: This is sync context, so we can't use async refreshSessionWithAPI here
+        // The refresh happens on next request, or implement a sync refresh method
+        authService.refreshSession(userId);
+        logger.info('Session auto-refreshed successfully', { userId });
+      } catch (refreshError) {
+        logger.warn('Session auto-refresh failed', {
+          userId,
+          error: refreshError instanceof Error ? refreshError.message : String(refreshError),
+        });
+        // Continue with current session even if refresh fails
+        // The next refresh attempt will try again
+      }
+    }
+
     logger.info('Authentication successful', { userId });
 
     return {

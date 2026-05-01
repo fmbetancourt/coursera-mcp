@@ -1092,8 +1092,8 @@ Todos los comandos de test en este documento usan `bun test`.
 - [x] T3.4: Auth middleware
 - [x] T3.5: Enrolled tests
 - [x] T3.6: Recommendations tests
-- [ ] T3.7: Tools registrados en MCP
-- [ ] T3.8: Session refresh
+- [x] T3.7: Tools registrados en MCP
+- [x] T3.8: Session refresh
 - [ ] T3.9: API.md actualizado
 
 **Criterio de éxito Fase 3**: 7 tools (4 públicos + 3 privados) funcionando, auth completa

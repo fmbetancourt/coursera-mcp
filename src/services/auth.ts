@@ -270,4 +270,65 @@ export class AuthService {
 
     logger.info('Session refreshed', { email });
   }
+
+  isSessionExpiringSoon(email: string, minuteThreshold = 5): boolean {
+    const session = this.loadSession(email);
+
+    if (!session) {
+      return false;
+    }
+
+    const now = Date.now();
+    const expiresInMs = session.expiresAt - now;
+    const thresholdMs = minuteThreshold * 60 * 1000;
+
+    return expiresInMs > 0 && expiresInMs <= thresholdMs;
+  }
+
+  async refreshSessionWithAPI(email: string): Promise<void> {
+    const session = this.loadSession(email);
+
+    if (!session) {
+      logger.error('Cannot refresh non-existent session', { email });
+      throw new Error('No session found');
+    }
+
+    try {
+      // Call API to get new token (mock endpoint for now)
+      const response = await this.courseraClient.post<{ sessionToken: string }>(
+        '/api/auth/refresh',
+        { email, refreshToken: session.refreshToken }
+      );
+
+      if (!response?.sessionToken) {
+        throw new Error('Invalid refresh response from API');
+      }
+
+      // Encrypt new token
+      const encryptedToken = this.encryptSessionToken(response.sessionToken);
+
+      // Update session
+      session.sessionToken = encryptedToken;
+      session.expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+      session.lastRefreshed = Date.now();
+
+      this.sessions.set(email, session);
+      this.saveSessions();
+      this.courseraClient.setSessionToken(response.sessionToken);
+
+      logger.info('Session refreshed with API', { email });
+    } catch (error) {
+      logger.error('Session refresh with API failed', {
+        email,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      // Logout on refresh failure
+      this.clearSession(email);
+
+      throw new Error(
+        `Session refresh failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
 }

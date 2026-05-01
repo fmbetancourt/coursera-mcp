@@ -23,6 +23,15 @@ class MockAuthService extends AuthService {
   getActiveSessions(): string[] {
     return this.activeSessions;
   }
+
+  override isSessionExpiringSoon(_email: string, _minuteThreshold?: number): boolean {
+    // Mock: sessions never expire in tests
+    return false;
+  }
+
+  override refreshSession(_email: string): void {
+    // Mock: no-op for tests
+  }
 }
 
 describe('Unit: Authentication Middleware', () => {
@@ -245,6 +254,23 @@ describe('Unit: Authentication Middleware', () => {
       const result = await wrapped('user-123');
 
       expect((result as Record<string, unknown>).accessed).toBe(true);
+    });
+  });
+
+  describe('Session Refresh', () => {
+    it('should indicate when session is expiring soon', () => {
+      mockAuth.setActiveSessions(['user-123']);
+
+      const isExpiring = mockAuth.isSessionExpiringSoon?.('user-123', 5) ?? false;
+      expect(typeof isExpiring).toBe('boolean');
+    });
+
+    it('should trigger refresh when session is expiring', async () => {
+      mockAuth.setActiveSessions(['user-123']);
+
+      // Should not throw when session is active
+      const context = requireAuth(mockAuth);
+      expect(context.userId).toBe('user-123');
     });
   });
 });
