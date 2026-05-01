@@ -285,8 +285,8 @@ These apply to all conversation with this project:
 
 ### "How do I run a single test?"
 ```bash
-pnpm test -- tests/unit/services/auth.unit.test.ts
-pnpm test -- --grep "TOTP validation"  # By test name
+bun test tests/unit/services/auth.unit.test.ts
+bun test -- --grep "TOTP validation"  # By test name
 ```
 
 ### "Where do I add a new tool?"
@@ -374,6 +374,6 @@ If you're about to:
 
 ---
 
-**Last Updated**: Abril 28, 2026  
-**Project Phase**: Pre-implementation (68 tasks ready in TASKS.md)  
-**Next Step**: Execute T1.1 from TASKS.md
+**Last Updated**: May 1, 2026  
+**Project Phase**: Complete - All 66 tasks done, 330/330 tests passing  
+**Status**: Ready for GitHub repository setup and npm publishing
