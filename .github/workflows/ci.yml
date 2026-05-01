@@ -72,6 +72,10 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
 
     steps:
       - name: Checkout code
@@ -79,6 +83,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -90,6 +95,11 @@ jobs:
 
       - name: Build
         run: bun run build
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "Semantic Release Bot"
+          git config --global user.email "noreply@github.com"
 
       - name: Setup Node for semantic-release
         uses: actions/setup-node@v4
