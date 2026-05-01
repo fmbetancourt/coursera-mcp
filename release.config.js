@@ -31,7 +31,7 @@ export default {
       {
         releasedLabels: ['released'],
         successComment: '🎉 This issue/PR is included in version ${nextRelease.version}',
-        failComment: 'This release from commit ${commit.sha} failed.',
+        failComment: 'Release failed. Check workflow logs at https://github.com/fmbetancourt/coursera-mcp/actions',
       },
     ],
   ],

@@ -110,6 +110,21 @@ jobs:
       - name: Install semantic-release
         run: npm install -g semantic-release @semantic-release/changelog @semantic-release/git
 
+      - name: Debug NPM Configuration
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo "NPM_TOKEN length: ${#NPM_TOKEN}"
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "ERROR: NPM_TOKEN is empty!"
+            exit 1
+          fi
+          if [ ${#NPM_TOKEN} -lt 30 ]; then
+            echo "WARNING: NPM_TOKEN seems too short (${#NPM_TOKEN} chars)"
+          fi
+          echo "Token starts with: $(echo $NPM_TOKEN | cut -c1-8)"
+          cat ~/.npmrc 2>/dev/null || echo "No .npmrc found"
+
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
