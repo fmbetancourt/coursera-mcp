@@ -1,8 +1,8 @@
 # Coursera MCP API Documentation
 
 **Version**: 0.1.0  
-**Status**: Fase 2 - 4 of 7 tools implemented  
-**Last Updated**: April 28, 2026
+**Status**: Fase 3 Complete - All 7 tools implemented (4 public + 3 private)  
+**Last Updated**: May 1, 2026
 
 ---
 
@@ -268,16 +268,292 @@ get_program_details({
 
 ## Private Tools (Fase 3)
 
-The following tools require TOTP 2FA authentication and will be implemented in Fase 3:
+The following tools require TOTP 2FA authentication. Users must complete the setup process before using these tools.
 
-### get_enrolled_courses
-List courses the authenticated user is enrolled in.
+### 5. get_enrolled_courses
 
-### get_progress
-Get progress for a specific course (percentage complete, current week, deadlines).
+List all courses the authenticated user is currently enrolled in.
 
-### get_recommendations
-Get personalized course/program recommendations based on user history.
+**Authentication:** Required (TOTP 2FA)
+
+**Parameters:**
+
+```typescript
+{
+  limit?: number;             // Default: 50, Max: 500
+  offset?: number;            // Default: 0
+  status?: 'active' | 'completed' | 'dropped';  // Filter by enrollment status
+  sortBy?: 'enrollmentDate' | 'progress' | 'name';
+  sortOrder?: 'asc' | 'desc'; // Default: 'desc'
+}
+```
+
+**Response:**
+
+```typescript
+{
+  items: EnrolledCourse[];
+  total: number;              // Total enrolled courses
+  hasMore: boolean;           // Whether more results available
+}
+```
+
+**EnrolledCourse Type:**
+
+```typescript
+{
+  id: string;                 // Course ID
+  name: string;
+  slug: string;
+  enrollmentDate: string;     // ISO 8601 date
+  progress: number;           // Percentage complete (0-100)
+  currentWeek: number;        // Current week number
+  totalWeeks: number;         // Total weeks in course
+  status: 'active' | 'completed' | 'dropped';
+  lastAccessedDate?: string;  // ISO 8601 date
+  certificate?: boolean;      // Certificate earned?
+  rating?: number;            // User's rating (0-5)
+}
+```
+
+**Cache:** 1 hour per userId (shorter TTL for personal data)  
+**Cache Key:** `enrolled:${userId}`  
+
+**Error Cases:**
+- `AuthenticationError`: No valid session (must authenticate first)
+- `CourseraException`: API failure (returns cached data if available)
+
+**Example:**
+
+```bash
+# Get user's active enrolled courses
+get_enrolled_courses({
+  status: "active",
+  limit: 20
+})
+
+# Get recently completed courses
+get_enrolled_courses({
+  status: "completed",
+  sortBy: "enrollmentDate",
+  sortOrder: "desc"
+})
+```
+
+---
+
+### 6. get_progress
+
+Get detailed progress information for a specific course.
+
+**Authentication:** Required (TOTP 2FA)
+
+**Parameters:**
+
+```typescript
+{
+  courseId: string;           // Required: course identifier
+}
+```
+
+**Response:**
+
+```typescript
+{
+  courseId: string;
+  userId: string;
+  percent: number;            // Percentage complete (0-100)
+  currentWeek: number;        // Current week number (1-indexed)
+  totalWeeks: number;         // Total weeks in course
+  completedWeeks: number;     // Number of completed weeks
+  upcomingDeadlines: Deadline[];
+  lastAccessedDate: string;   // ISO 8601 date
+  estimatedCompletionDate?: string;
+}
+```
+
+**Deadline Type:**
+
+```typescript
+{
+  week: number;
+  dueDate: string;            // ISO 8601 date
+  type: 'quiz' | 'assignment' | 'project' | 'exam';
+  completed: boolean;
+}
+```
+
+**Cache:** 1 hour per `${userId}:${courseId}`  
+**Cache Key:** `progress:${userId}:${courseId}`  
+
+**Error Cases:**
+- `AuthenticationError`: No valid session
+- `NotFoundError`: Course not found or user not enrolled
+- `CourseraException`: API failure
+
+**Example:**
+
+```bash
+# Get progress for a specific course
+get_progress({
+  courseId: "python-for-data-science"
+})
+
+# Returns:
+{
+  percent: 65,
+  currentWeek: 7,
+  totalWeeks: 10,
+  upcomingDeadlines: [
+    {
+      week: 7,
+      dueDate: "2026-05-15T23:59:59Z",
+      type: "quiz",
+      completed: false
+    }
+  ]
+}
+```
+
+---
+
+### 7. get_recommendations
+
+Get personalized course and program recommendations based on user's enrollment history and learning patterns.
+
+**Authentication:** Required (TOTP 2FA)
+
+**Parameters:**
+
+```typescript
+{
+  limit?: number;             // Default: 10, Max: 100 (1-100 validation)
+  includePrograms?: boolean;  // Default: true
+  includeCourses?: boolean;   // Default: true
+}
+```
+
+**Response:**
+
+```typescript
+{
+  recommendations: Recommendation[];
+  total: number;
+  generatedAt: string;        // ISO 8601 date
+}
+```
+
+**Recommendation Type:**
+
+```typescript
+{
+  id: string;                 // Course or Program ID
+  name: string;
+  type: 'course' | 'program';
+  matchScore: number;         // 0-100 (higher = more relevant)
+  reason: string;             // Why this is recommended
+  relevantSkills: string[];   // Skills user can learn
+  estimatedDuration: number;  // weeks
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  rating?: number;            // Course/program rating (0-5)
+  enrollments?: number;       // Number of enrollments
+}
+```
+
+**Recommendation Scoring:**
+
+```
+matchScore = baseScore (50)
+           + skillMatch (0-20)
+           + rating (0-15)
+           + popularity (0-10)
+           + difficulty (0-5)
+```
+
+**Cache:** 6 hours per userId (personal but expensive to compute)  
+**Cache Key:** `recommendations:${userId}`  
+
+**Error Cases:**
+- `AuthenticationError`: No valid session
+- `ValidationError`: Invalid limit parameter (must be 1-100)
+- `CourseraException`: API failure
+
+**Example:**
+
+```bash
+# Get top 10 recommendations (courses and programs)
+get_recommendations({
+  limit: 10
+})
+
+# Get only course recommendations
+get_recommendations({
+  includeCourses: true,
+  includePrograms: false,
+  limit: 5
+})
+
+# Returns:
+{
+  recommendations: [
+    {
+      id: "machine-learning-advanced",
+      name: "Advanced Machine Learning",
+      type: "course",
+      matchScore: 92,
+      reason: "You've completed Python fundamentals and Data Science - this advances those skills",
+      difficulty: "advanced",
+      rating: 4.8
+    }
+  ]
+}
+```
+
+---
+
+### Authentication Flow for Private Tools
+
+To use private tools, users must authenticate once:
+
+```
+1. Session starts → No active session
+2. Call any private tool → AuthenticationError
+3. User runs: coursera-mcp auth setup
+4. Email/password entered (memory only, not stored)
+5. TOTP QR code displayed
+6. User scans with Authenticator app
+7. User enters 6-digit code
+8. Session token encrypted and saved to ~/.coursera-mcp/sessions.json
+9. Private tools now accessible
+```
+
+**Automatic Session Refresh:**
+
+The system automatically refreshes sessions that are expiring soon (within 5 minutes):
+
+- On each private tool call, session expiration is checked
+- If expiring soon, an automatic refresh is triggered
+- If refresh fails, user is logged out (AuthenticationError)
+- User must re-authenticate with `coursera-mcp auth setup`
+
+---
+
+### Session Management
+
+**Session Expiration:**
+- Tokens expire after 24 hours
+- Automatic refresh triggered at 5 minute warning
+- Refresh fails gracefully (user is logged out)
+
+**Multiple Sessions:**
+- Users can maintain multiple active sessions (different devices)
+- Each session is managed independently
+- Session data stored in `~/.coursera-mcp/sessions.json` (mode 0o600)
+
+**Security:**
+- Session tokens encrypted with AES-256-GCM
+- Master password derived with PBKDF2 (100k iterations)
+- No credentials stored on disk (only after TOTP setup)
 
 ---
 
@@ -410,6 +686,28 @@ get_program_details({
 })
 ```
 
+### Authenticated Tools (Fase 3)
+
+```bash
+# Get user's enrolled courses (requires authentication)
+get_enrolled_courses({
+  status: "active",
+  limit: 20
+})
+
+# Get progress in a course
+get_progress({
+  courseId: "python-for-data-science"
+})
+
+# Get personalized recommendations
+get_recommendations({
+  limit: 10,
+  includeCourses: true,
+  includePrograms: true
+})
+```
+
 ### Error Handling
 
 ```bash
@@ -420,6 +718,8 @@ try {
     console.log(`Course not found: ${error.resourceId}`)
   } else if (error instanceof ValidationError) {
     console.log(`Validation failed: ${error.field} - ${error.reason}`)
+  } else if (error instanceof AuthenticationError) {
+    console.log("Please authenticate: coursera-mcp auth setup")
   }
 }
 ```
@@ -428,31 +728,46 @@ try {
 
 ## Performance Characteristics
 
-| Tool | Response Time | Cache Hit | Cache Miss |
-|------|---------------|-----------|-----------|
-| search_courses | 200-500ms | 1-5ms | 300-800ms |
-| search_programs | 200-500ms | 1-5ms | 300-800ms |
-| get_course_details | 150-400ms | 1-5ms | 200-600ms |
-| get_program_details | 150-400ms | 1-5ms | 200-600ms |
+| Tool | Response Time | Cache Hit | Cache Miss | Cache TTL |
+|------|---------------|-----------|-----------|-----------|
+| search_courses | 200-500ms | 1-5ms | 300-800ms | 24h |
+| search_programs | 200-500ms | 1-5ms | 300-800ms | 24h |
+| get_course_details | 150-400ms | 1-5ms | 200-600ms | 24h |
+| get_program_details | 150-400ms | 1-5ms | 200-600ms | 24h |
+| get_enrolled_courses | 200-600ms | 1-5ms | 400-1000ms | 1h |
+| get_progress | 150-500ms | 1-5ms | 300-800ms | 1h |
+| get_recommendations | 300-800ms | 1-5ms | 600-1500ms | 6h |
 
-*Times vary based on Coursera API latency and circuit breaker state*
+*Times vary based on Coursera API latency and circuit breaker state*  
+*Private tools (get_enrolled_courses, get_progress, get_recommendations) require active session*
 
 ---
 
 ## Status & Roadmap
 
-**Implemented (Fase 2):**
+**Implemented (Fase 2 - Public Tools):**
 - ✅ search_courses
 - ✅ search_programs
 - ✅ get_course_details
 - ✅ get_program_details
 
-**Planned (Fase 3):**
-- ⏳ get_enrolled_courses (requires auth)
-- ⏳ get_progress (requires auth)
-- ⏳ get_recommendations (requires auth)
+**Implemented (Fase 3 - Private Tools):**
+- ✅ get_enrolled_courses (with TOTP 2FA)
+- ✅ get_progress (with TOTP 2FA)
+- ✅ get_recommendations (with TOTP 2FA)
+
+**Authentication & Session Management:**
+- ✅ TOTP 2FA setup and validation
+- ✅ Encrypted session token storage (AES-256-GCM)
+- ✅ Automatic session refresh (within 5 min of expiration)
+- ✅ Multi-session support
 
 **Testing:**
-- ✅ 227 unit & integration tests
+- ✅ 326 unit & integration tests
 - ✅ 85%+ code coverage
-- ⏳ E2E tests (Fase 2)
+- ⏳ E2E tests (Fase 4)
+
+**Infrastructure:**
+- ⏳ GitHub Actions CI/CD (Fase 4)
+- ⏳ npm publish (Fase 4)
+- ⏳ Claude Desktop integration (Fase 4)
