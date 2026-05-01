@@ -1086,12 +1086,12 @@ Todos los comandos de test en este documento usan `bun test`.
 
 ## Checklist Fase 3
 
-- [ ] T3.1: get_enrolled_courses implementado
-- [ ] T3.2: get_progress implementado
-- [ ] T3.3: get_recommendations implementado
-- [ ] T3.4: Auth middleware
-- [ ] T3.5: Enrolled tests
-- [ ] T3.6: Recommendations tests
+- [x] T3.1: get_enrolled_courses implementado
+- [x] T3.2: get_progress implementado
+- [x] T3.3: get_recommendations implementado
+- [x] T3.4: Auth middleware
+- [x] T3.5: Enrolled tests
+- [x] T3.6: Recommendations tests
 - [ ] T3.7: Tools registrados en MCP
 - [ ] T3.8: Session refresh
 - [ ] T3.9: API.md actualizado

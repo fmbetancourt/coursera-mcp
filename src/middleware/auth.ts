@@ -22,28 +22,18 @@ export class AuthorizationError extends Error {
   }
 }
 
-export async function requireAuth(
+export function requireAuth(
   authService: AuthService
-): Promise<AuthContext> {
+): AuthContext {
   try {
-    const userId = authService.getCurrentUserId();
+    const activeSessions = authService.getActiveSessions();
 
-    if (!userId) {
+    if (!activeSessions || activeSessions.length === 0) {
       logger.error('Authentication required but no active session', {});
       throw new AuthenticationError('No active session. Please authenticate first.');
     }
 
-    const isValid = authService.isSessionValid();
-    if (!isValid) {
-      logger.info('Session expired, attempting refresh', { userId });
-      const refreshed = await (authService.refreshSession() as Promise<boolean>);
-
-      if (!refreshed) {
-        logger.error('Failed to refresh session', { userId });
-        throw new AuthenticationError('Session expired. Please re-authenticate.');
-      }
-    }
-
+    const userId = activeSessions[0];
     logger.info('Authentication successful', { userId });
 
     return {
@@ -68,7 +58,7 @@ export function withAuth<Args extends unknown[], Result>(
   authService: AuthService
 ) {
   return async (...args: Args): Promise<Result> => {
-    await requireAuth(authService);
+    requireAuth(authService);
     return handler(...args);
   };
 }
@@ -77,11 +67,13 @@ export function verifyUserAccess(
   authService: AuthService,
   requestedUserId: string
 ): void {
-  const currentUserId = authService.getCurrentUserId();
+  const activeSessions = authService.getActiveSessions();
 
-  if (!currentUserId) {
+  if (!activeSessions || activeSessions.length === 0) {
     throw new AuthenticationError('No active session.');
   }
+
+  const currentUserId = activeSessions[0];
 
   if (currentUserId !== requestedUserId) {
     logger.warn('Unauthorized access attempt', {

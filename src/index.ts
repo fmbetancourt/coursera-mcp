@@ -4,6 +4,9 @@ import { CacheService } from './services/cache';
 import { AuthService } from './services/auth';
 import { searchCourses, searchPrograms } from './tools/search';
 import { getCourseDetails, getProgramDetails } from './tools/details';
+import { getEnrolledCourses, getProgress } from './tools/enrolled';
+import { getRecommendations } from './tools/recommendations';
+import { requireAuth } from './middleware/auth';
 import path from 'path';
 import type { SearchCourseParams, SearchProgramParams } from './types/schemas';
 
@@ -36,19 +39,19 @@ export const toolHandlers = {
     return getProgramDetails(courseraClient, cache, programId);
   },
 
-  get_enrolled_courses: () => {
-    logger.warn('Tool not yet implemented: get_enrolled_courses (requires Fase 3)');
-    throw new Error('get_enrolled_courses not yet implemented');
+  get_enrolled_courses: async (_userId: string, params?: Record<string, unknown>) => {
+    const context = requireAuth(authService);
+    return getEnrolledCourses(courseraClient, cache, context.userId, params);
   },
 
-  get_progress: () => {
-    logger.warn('Tool not yet implemented: get_progress (requires Fase 3)');
-    throw new Error('get_progress not yet implemented');
+  get_progress: async (_userId: string, courseId: string) => {
+    const context = requireAuth(authService);
+    return getProgress(courseraClient, cache, context.userId, courseId);
   },
 
-  get_recommendations: () => {
-    logger.warn('Tool not yet implemented: get_recommendations (requires Fase 3)');
-    throw new Error('get_recommendations not yet implemented');
+  get_recommendations: async (_userId: string, params?: { limit?: number }) => {
+    const context = requireAuth(authService);
+    return getRecommendations(courseraClient, cache, context.userId, params);
   },
 };
 

@@ -42,34 +42,34 @@ describe('Tool Handlers', () => {
     expect(typeof toolHandlers.get_recommendations).toBe('function');
   });
 
-  describe('Unimplemented tools (Fase 3)', () => {
-    it('should throw for get_enrolled_courses', async () => {
+  describe('Private tools (Fase 3) - require authentication', () => {
+    it('should throw AuthenticationError for get_enrolled_courses without session', async () => {
       try {
-        await toolHandlers.get_enrolled_courses();
+        await toolHandlers.get_enrolled_courses('user-123');
         expect.unreachable();
       } catch (error) {
         expect(error).toBeDefined();
-        expect((error as Error).message).toContain('not yet implemented');
+        expect((error as Error).message).toContain('No active session');
       }
     });
 
-    it('should throw for get_progress', async () => {
+    it('should throw AuthenticationError for get_progress without session', async () => {
       try {
-        await toolHandlers.get_progress();
+        await toolHandlers.get_progress('user-123', 'course-123');
         expect.unreachable();
       } catch (error) {
         expect(error).toBeDefined();
-        expect((error as Error).message).toContain('not yet implemented');
+        expect((error as Error).message).toContain('No active session');
       }
     });
 
-    it('should throw for get_recommendations', async () => {
+    it('should throw AuthenticationError for get_recommendations without session', async () => {
       try {
-        await toolHandlers.get_recommendations();
+        await toolHandlers.get_recommendations('user-123');
         expect.unreachable();
       } catch (error) {
         expect(error).toBeDefined();
-        expect((error as Error).message).toContain('not yet implemented');
+        expect((error as Error).message).toContain('No active session');
       }
     });
   });
