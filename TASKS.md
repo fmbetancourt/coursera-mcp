@@ -1431,7 +1431,7 @@ Todos los comandos de test en este documento usan `bun test`.
 
 ## Checklist Fase 4
 
-- [ ] T4.1: GitHub Actions workflow
+- [x] T4.1: GitHub Actions workflow
 - [ ] T4.2: semantic-release setup
 - [ ] T4.3: Codecov setup
 - [ ] T4.4: CONTRIBUTING.md
