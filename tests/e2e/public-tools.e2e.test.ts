@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
 import fs from 'fs-extra';
 import path from 'path';
-import { toolHandlers } from '../../src/index';
+import { toolHandlers, authService } from '../../src/index';
 import { mockCourses, mockPrograms } from '../fixtures';
 
 // Create a test client with mock responses
@@ -279,6 +279,14 @@ describe('E2E: Public Tools Workflow', () => {
   });
 
   describe('Tool Handler Integration', () => {
+    beforeEach(() => {
+      // Clear all sessions before testing authentication requirements
+      const activeSessions = authService.getActiveSessions();
+      for (const email of activeSessions) {
+        authService.clearSession(email);
+      }
+    });
+
     it('should have all public tool handlers available', () => {
       expect(toolHandlers.search_courses).toBeDefined();
       expect(toolHandlers.search_programs).toBeDefined();
@@ -286,10 +294,37 @@ describe('E2E: Public Tools Workflow', () => {
       expect(toolHandlers.get_program_details).toBeDefined();
     });
 
-    it('should have private tools marked as not implemented', () => {
-      expect(() => toolHandlers.get_enrolled_courses()).toThrow();
-      expect(() => toolHandlers.get_progress()).toThrow();
-      expect(() => toolHandlers.get_recommendations()).toThrow();
+    it('should have private tools available and require authentication', async () => {
+      expect(toolHandlers.get_enrolled_courses).toBeDefined();
+      expect(typeof toolHandlers.get_enrolled_courses).toBe('function');
+
+      expect(toolHandlers.get_progress).toBeDefined();
+      expect(typeof toolHandlers.get_progress).toBe('function');
+
+      expect(toolHandlers.get_recommendations).toBeDefined();
+      expect(typeof toolHandlers.get_recommendations).toBe('function');
+
+      // Verify they require authentication (no active session should throw)
+      try {
+        await toolHandlers.get_enrolled_courses('test-user');
+        expect.unreachable('get_enrolled_courses should require auth');
+      } catch (error) {
+        expect(error).toBeDefined();
+      }
+
+      try {
+        await toolHandlers.get_progress('test-user', 'course-id');
+        expect.unreachable('get_progress should require auth');
+      } catch (error) {
+        expect(error).toBeDefined();
+      }
+
+      try {
+        await toolHandlers.get_recommendations('test-user');
+        expect.unreachable('get_recommendations should require auth');
+      } catch (error) {
+        expect(error).toBeDefined();
+      }
     });
   });
 });

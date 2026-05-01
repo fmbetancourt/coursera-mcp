@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
-import { toolHandlers } from '../../../src/index';
+import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { toolHandlers, authService } from '../../../src/index';
 
 describe('Tool Handlers', () => {
   it('should have all 7 tool handlers defined', () => {
@@ -43,6 +43,14 @@ describe('Tool Handlers', () => {
   });
 
   describe('Private tools (Fase 3) - require authentication', () => {
+    beforeEach(() => {
+      // Clear all sessions before each test to ensure no active session
+      const activeSessions = authService.getActiveSessions();
+      for (const email of activeSessions) {
+        authService.clearSession(email);
+      }
+    });
+
     it('should throw AuthenticationError for get_enrolled_courses without session', async () => {
       try {
         await toolHandlers.get_enrolled_courses('user-123');
