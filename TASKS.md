@@ -1440,7 +1440,7 @@ Todos los comandos de test en este documento usan `bun test`.
 - [x] T4.7: SECURITY_USERS.md
 - [x] T4.8: esbuild setup
 - [x] T4.9: CLI binario
-- [ ] T4.10: E2E user flow
+- [x] T4.10: E2E user flow
 - [ ] T4.11: Performance check
 - [ ] T4.12: Security audit
 - [ ] T4.13: CHANGELOG.md
