@@ -1,7 +1,7 @@
 # Coursera MCP
 
-[![CI/CD Pipeline](https://github.com/yourusername/coursera-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/coursera-mcp/actions)
-[![Coverage Status](https://codecov.io/gh/yourusername/coursera-mcp/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/coursera-mcp)
+[![CI/CD Pipeline](https://github.com/fmbetancourt/coursera-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/fmbetancourt/coursera-mcp/actions)
+[![Coverage Status](https://codecov.io/gh/fmbetancourt/coursera-mcp/branch/main/graph/badge.svg)](https://codecov.io/gh/fmbetancourt/coursera-mcp)
 [![npm version](https://badge.fury.io/js/coursera-mcp.svg)](https://badge.fury.io/js/coursera-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -38,7 +38,7 @@ npm install -g coursera-mcp
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/coursera-mcp.git
+git clone https://github.com/fmbetancourt/coursera-mcp.git
 cd coursera-mcp
 bun install
 bun run build
@@ -226,7 +226,7 @@ See [SECURITY.md](docs/SECURITY_USERS.md) for detailed security information.
 - [ ] Study group finder
 - [ ] Learning path recommendations
 
-See [GitHub Issues](https://github.com/yourusername/coursera-mcp/issues) for roadmap details.
+See [GitHub Issues](https://github.com/fmbetancourt/coursera-mcp/issues) for roadmap details.
 
 ## Contributing
 
@@ -277,8 +277,8 @@ MIT © 2026 Freddy Betancourt
 ## Support
 
 - 📖 Check [documentation](docs/)
-- 🐛 [Report issues](https://github.com/yourusername/coursera-mcp/issues)
-- 💬 [Start a discussion](https://github.com/yourusername/coursera-mcp/discussions)
+- 🐛 [Report issues](https://github.com/fmbetancourt/coursera-mcp/issues)
+- 💬 [Start a discussion](https://github.com/fmbetancourt/coursera-mcp/discussions)
 
 ---
 

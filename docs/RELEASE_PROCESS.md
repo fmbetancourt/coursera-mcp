@@ -185,7 +185,7 @@ Before pushing to main:
 gh run list --workflow=ci.yml
 
 # Watch live
-gh run watch --repo yourusername/coursera-mcp
+gh run watch --repo fmbetancourt/coursera-mcp
 
 # View specific run details
 gh run view {run_id} --log

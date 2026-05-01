@@ -1,6 +1,7 @@
 export default {
   branches: ['main', 'develop'],
   tagFormat: 'v${version}',
+  repositoryUrl: 'https://github.com/fmbetancourt/coursera-mcp.git',
   plugins: [
     '@semantic-release/commit-analyzer',
     '@semantic-release/release-notes-generator',

@@ -319,8 +319,8 @@ No configuration changes needed. Claude will automatically use the new version.
 ## Support
 
 - 📖 [API Documentation](API.md)
-- 🐛 [Report Issues](https://github.com/yourusername/coursera-mcp/issues)
-- 💬 [Discussions](https://github.com/yourusername/coursera-mcp/discussions)
+- 🐛 [Report Issues](https://github.com/fmbetancourt/coursera-mcp/issues)
+- 💬 [Discussions](https://github.com/fmbetancourt/coursera-mcp/discussions)
 
 ---
 

@@ -480,9 +480,9 @@ Each computer maintains its own encrypted session.
 
 ## Need Help?
 
-- 📖 Full docs: [https://github.com/yourusername/coursera-mcp](https://github.com/yourusername/coursera-mcp)
-- 🐛 Report bugs: [GitHub Issues](https://github.com/yourusername/coursera-mcp/issues)
-- 💬 Ask questions: [GitHub Discussions](https://github.com/yourusername/coursera-mcp/discussions)
+- 📖 Full docs: [https://github.com/fmbetancourt/coursera-mcp](https://github.com/fmbetancourt/coursera-mcp)
+- 🐛 Report bugs: [GitHub Issues](https://github.com/fmbetancourt/coursera-mcp/issues)
+- 💬 Ask questions: [GitHub Discussions](https://github.com/fmbetancourt/coursera-mcp/discussions)
 
 ---
 

@@ -33,7 +33,7 @@ gh repo create coursera-mcp \
 ### Configure remote (if not done via CLI):
 
 ```bash
-git remote add origin https://github.com/yourusername/coursera-mcp.git
+git remote add origin https://github.com/fmbetancourt/coursera-mcp.git
 git branch -M main
 git push -u origin main
 ```
@@ -43,8 +43,8 @@ git push -u origin main
 ```bash
 git remote -v
 # Should show:
-# origin  https://github.com/yourusername/coursera-mcp.git (fetch)
-# origin  https://github.com/yourusername/coursera-mcp.git (push)
+# origin  https://github.com/fmbetancourt/coursera-mcp.git (fetch)
+# origin  https://github.com/fmbetancourt/coursera-mcp.git (push)
 ```
 
 ## Step 3: Configure GitHub Secrets
@@ -92,7 +92,7 @@ Protects `main` branch to require PR reviews before merging:
 ### Via GitHub CLI
 
 ```bash
-gh api repos/yourusername/coursera-mcp/branches/main/protection \
+gh api repos/fmbetancourt/coursera-mcp/branches/main/protection \
   -X PUT \
   -f required_status_checks='{"strict":true,"contexts":["build","test","coverage"]}' \
   -f required_pull_request_reviews='{"dismiss_stale_reviews":true,"require_code_owner_reviews":false}' \
@@ -111,14 +111,14 @@ gh api repos/yourusername/coursera-mcp/branches/main/protection \
 
 ## Step 5: Configure GitHub Pages (Optional)
 
-To host documentation at `yourusername.github.io/coursera-mcp`:
+To host documentation at `fmbetancourt.github.io/coursera-mcp`:
 
 1. Go to **Settings** → **Pages**
 2. Source: `Deploy from a branch`
 3. Branch: `main` → `/docs` folder
 4. Save
 
-Then documentation will be at: `https://yourusername.github.io/coursera-mcp/`
+Then documentation will be at: `https://fmbetancourt.github.io/coursera-mcp/`
 
 ## Step 6: Add GitHub Topics (Optional)
 
@@ -149,7 +149,7 @@ gh run list --workflow=ci.yml
 Watch live:
 
 ```bash
-gh run watch --repo yourusername/coursera-mcp
+gh run watch --repo fmbetancourt/coursera-mcp
 ```
 
 ## GitHub Secrets Reference

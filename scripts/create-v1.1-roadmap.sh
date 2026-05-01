@@ -6,11 +6,16 @@
 # This script requires:
 # - GitHub CLI (gh) installed and authenticated
 # - Repository set up and pushed to GitHub
-# - Repository in yourusername/coursera-mcp format
+# - GITHUB_REPOSITORY environment variable (auto-set in GitHub Actions)
 
 set -e
 
-REPO="${GITHUB_REPOSITORY:-yourusername/coursera-mcp}"
+REPO="${GITHUB_REPOSITORY}"
+if [ -z "$REPO" ]; then
+  echo "Error: GITHUB_REPOSITORY not set"
+  echo "Usage: GITHUB_REPOSITORY=username/repo ./scripts/create-v1.1-roadmap.sh"
+  exit 1
+fi
 PROJECT_LABEL="v1.1-roadmap"
 MILESTONE="v1.0"
 
