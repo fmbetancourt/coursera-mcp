@@ -1435,7 +1435,7 @@ Todos los comandos de test en este documento usan `bun test`.
 - [x] T4.2: semantic-release setup
 - [x] T4.3: Codecov setup
 - [x] T4.4: CONTRIBUTING.md
-- [ ] T4.5: DEVELOPMENT.md
+- [x] T4.5: DEVELOPMENT.md
 - [ ] T4.6: README.md
 - [ ] T4.7: SECURITY_USERS.md
 - [ ] T4.8: esbuild setup
