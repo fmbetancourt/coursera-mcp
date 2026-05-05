@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+# [1.1.0](https://github.com/fmbetancourt/coursera-mcp/compare/v1.0.0...v1.1.0) (2026-05-05)
+
+
+### Features
+
+* complete Phase 4 remaining deliverables ([60423b3](https://github.com/fmbetancourt/coursera-mcp/commit/60423b34b41d53faf8573654c6c5dad85f750bd0))
+
 # 1.0.0 (2026-05-05)
 
 
