@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+# [1.3.0](https://github.com/fmbetancourt/coursera-mcp/compare/v1.2.0...v1.3.0) (2026-05-05)
+
+
+### Bug Fixes
+
+* connect tools to real Coursera public API ([e9430d8](https://github.com/fmbetancourt/coursera-mcp/commit/e9430d89cc3082c805fce777bb5e78976327aaf7))
+
+
+### Features
+
+* Full catalog search (21K+ courses) + private tools auth ([c6bf736](https://github.com/fmbetancourt/coursera-mcp/commit/c6bf73605913cb1c7066603d43ba8647741ea503))
+
 # [1.2.0](https://github.com/fmbetancourt/coursera-mcp/compare/v1.1.0...v1.2.0) (2026-05-05)
 
 
