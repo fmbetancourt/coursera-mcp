@@ -1,3 +1,7 @@
 #!/usr/bin/env node
 
-require('../dist/index.js');
+// Dynamic import required: package.json has "type": "module" (ESM), require() is not available
+import('../dist/index.js').catch((err) => {
+  console.error('Failed to start coursera-mcp:', err.message);
+  process.exit(1);
+});
