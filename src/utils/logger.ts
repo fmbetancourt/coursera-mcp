@@ -40,10 +40,12 @@ const logger = winston.createLogger({
   ],
 });
 
-// In development, also log to console
+// MCP protocol requires stdout to carry only JSON-RPC messages.
+// All log output must go to stderr so it never corrupts the MCP transport.
 if (process.env.NODE_ENV !== 'production') {
   logger.add(
     new winston.transports.Console({
+      stderrLevels: ['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly'],
       format: winston.format.combine(
         winston.format.colorize(),
         winston.format.simple()
