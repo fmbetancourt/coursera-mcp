@@ -1,5 +1,8 @@
 export default {
-  branches: ['main', 'develop'],
+  branches: [
+    'main',
+    { name: 'develop', prerelease: 'beta', channel: 'beta' },
+  ],
   tagFormat: 'v${version}',
   repositoryUrl: 'https://github.com/fmbetancourt/coursera-mcp.git',
   plugins: [

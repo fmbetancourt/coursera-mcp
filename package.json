@@ -22,13 +22,13 @@
   ],
   "author": "Freddy Betancourt <freddy.moreno@gmail.com>",
   "license": "MIT",
-  "homepage": "https://github.com/yourusername/coursera-mcp",
+  "homepage": "https://github.com/fmbetancourt/coursera-mcp",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/coursera-mcp.git"
+    "url": "https://github.com/fmbetancourt/coursera-mcp.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/coursera-mcp/issues"
+    "url": "https://github.com/fmbetancourt/coursera-mcp/issues"
   },
   "files": [
     "dist",
@@ -50,6 +50,8 @@
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^9.2.6",
+    "@semantic-release/npm": "^11.0.3",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^20.10.6",
     "@types/qrcode": "^1.5.6",

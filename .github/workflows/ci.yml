@@ -48,7 +48,6 @@ jobs:
 
       - name: Check coverage threshold
         run: |
-          # Extract coverage percentage from test output
           COVERAGE=$(grep -oP 'coverage:\s+\K\d+' coverage.log | head -1)
           if [ -z "$COVERAGE" ]; then
             echo "Could not extract coverage percentage, assuming tests passed"
@@ -101,33 +100,31 @@ jobs:
           git config --global user.name "Semantic Release Bot"
           git config --global user.email "noreply@github.com"
 
+      # setup-node without registry-url — semantic-release manages its own .npmrc via NPM_TOKEN
       - name: Setup Node for semantic-release
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-          registry-url: 'https://registry.npmjs.org'
 
-      - name: Install semantic-release
-        run: npm install -g semantic-release @semantic-release/changelog @semantic-release/git
+      - name: Install semantic-release plugins
+        run: npm install -g semantic-release @semantic-release/changelog @semantic-release/git @semantic-release/npm @semantic-release/github
 
-      - name: Debug NPM Configuration
+      - name: Validate NPM token
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          echo "NPM_TOKEN length: ${#NPM_TOKEN}"
           if [ -z "$NPM_TOKEN" ]; then
-            echo "ERROR: NPM_TOKEN is empty!"
+            echo "ERROR: NPM_TOKEN secret is not set"
             exit 1
           fi
-          if [ ${#NPM_TOKEN} -lt 30 ]; then
-            echo "WARNING: NPM_TOKEN seems too short (${#NPM_TOKEN} chars)"
-          fi
-          echo "Token starts with: $(echo $NPM_TOKEN | cut -c1-8)"
-          cat ~/.npmrc 2>/dev/null || echo "No .npmrc found"
+          echo "NPM_TOKEN length: ${#NPM_TOKEN}"
+          echo "Token prefix: $(echo "$NPM_TOKEN" | cut -c1-8)..."
+          # Write token to .npmrc and verify authentication
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          npm whoami && echo "NPM authentication OK" || (echo "ERROR: NPM token is invalid or expired. Regenerate an Automation token at https://www.npmjs.com/settings/~/tokens" && exit 1)
 
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GITHUB_REPOSITORY: fmbetancourt/coursera-mcp
         run: semantic-release
