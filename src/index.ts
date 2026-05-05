@@ -218,7 +218,30 @@ process.on('unhandledRejection', (reason: unknown) => {
   process.exit(1);
 });
 
-// Exports for testing
+// Exports for testing — toolHandlers mirrors the MCP tool registry for unit/e2e tests
+export const toolHandlers = {
+  search_courses: (params: Parameters<typeof searchCourses>[2]) =>
+    searchCourses(courseraClient, cache, params),
+  search_programs: (params: Parameters<typeof searchPrograms>[2]) =>
+    searchPrograms(courseraClient, cache, params),
+  get_course_details: (courseId: string) =>
+    getCourseDetails(courseraClient, cache, courseId),
+  get_program_details: (programId: string) =>
+    getProgramDetails(courseraClient, cache, programId),
+  get_enrolled_courses: (_userId: string, params?: Record<string, unknown>) => {
+    const context = requireAuth(authService);
+    return getEnrolledCourses(courseraClient, cache, context.userId, params);
+  },
+  get_progress: (_userId: string, courseId: string) => {
+    const context = requireAuth(authService);
+    return getProgress(courseraClient, cache, context.userId, courseId);
+  },
+  get_recommendations: (_userId: string, params?: { limit?: number }) => {
+    const context = requireAuth(authService);
+    return getRecommendations(courseraClient, cache, context.userId, params);
+  },
+};
+
 export { courseraClient, cache, authService };
 
 // Self-invoking main — avoids top-level await (required for --format=cjs esbuild output)
