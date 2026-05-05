@@ -67,3 +67,4 @@ coursera-mcp.iml
 .env.*.local
 .cache
 dist
+.test-*-cache/
