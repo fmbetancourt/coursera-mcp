@@ -6,6 +6,7 @@ import { createServiceUnavailableError } from '../types/errors';
 export class CourseraClient {
   private axiosInstance: AxiosInstance;
   private sessionToken?: string;
+  private cauthCookie?: string;
   private circuitBreaker: CircuitBreaker<unknown>;
 
   constructor(baseURL = 'https://api.coursera.org') {
@@ -19,9 +20,11 @@ export class CourseraClient {
       },
     });
 
-    // Request interceptor to add auth header
+    // Request interceptor to add auth header or CAUTH cookie
     this.axiosInstance.interceptors.request.use((config) => {
-      if (this.sessionToken) {
+      if (this.cauthCookie) {
+        config.headers['Cookie'] = `CAUTH=${this.cauthCookie}`;
+      } else if (this.sessionToken) {
         config.headers.Authorization = `Bearer ${this.sessionToken}`;
       }
       return config;
@@ -47,6 +50,14 @@ export class CourseraClient {
 
   clearSessionToken(): void {
     this.sessionToken = undefined;
+  }
+
+  setCauthCookie(cookie: string): void {
+    this.cauthCookie = cookie;
+  }
+
+  clearCauthCookie(): void {
+    this.cauthCookie = undefined;
   }
 
   async get<T>(url: string, config: AxiosRequestConfig = {}): Promise<T> {

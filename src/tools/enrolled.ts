@@ -1,76 +1,97 @@
-import { logger } from '../utils/logger';
-import { CourseraClient } from '../services/courseraClient';
-import { CacheService } from '../services/cache';
-import { parseEnrolledCourses, parseProgress } from '../services/parser';
-import type { EnrolledCourse, Progress } from '../types/schemas';
+import { logger } from '../utils/logger.js';
+import { CourseraClient } from '../services/courseraClient.js';
+import { CacheService } from '../services/cache.js';
+
+// Real Coursera membership response shape from /api/memberships.v1?q=me
+interface CourseraMembership {
+  id: string; // "userId~courseId"
+  courseId: string;
+  enrolledTimestamp?: number;
+  lastActivityTimestamp?: number;
+  grade?: string;
+}
+
+interface MembershipsResponse {
+  elements: CourseraMembership[];
+  paging?: { total?: number };
+}
+
+// Real Coursera progress response from /api/opencourse.v1/user/{userId}/course/{slug}/progressV2
+interface CourseProgressV2 {
+  progressSummary?: {
+    numCompletedItems?: number;
+    numTotalItems?: number;
+    numCompletedModules?: number;
+    numTotalModules?: number;
+  };
+}
 
 export interface EnrolledCoursesResult {
-  courses: EnrolledCourse[];
+  courses: Array<{
+    courseId: string;
+    membershipId: string;
+    enrolledAt: string | null;
+    lastActivityAt: string | null;
+    grade: string | null;
+    courseUrl: string;
+  }>;
   totalEnrolled: number;
   completedCount: number;
 }
 
-export interface EnrolledCoursesParams {
-  includeProgress?: boolean;
-  includeUpcoming?: boolean;
+export interface ProgressResult {
+  courseId: string;
+  userId: string;
+  completedItems: number;
+  totalItems: number;
+  completedModules: number;
+  totalModules: number;
+  percentComplete: number;
 }
 
 export async function getEnrolledCourses(
   courseraClient: CourseraClient,
   cache: CacheService,
   userId: string,
-  _params?: EnrolledCoursesParams
+  _params?: Record<string, unknown>
 ): Promise<EnrolledCoursesResult> {
-  try {
-    if (!userId || userId.length === 0) {
-      throw new Error('userId is required');
-    }
+  if (!userId?.trim()) throw new Error('userId is required');
 
-    logger.info('Fetching enrolled courses', { userId });
+  logger.info('Fetching enrolled courses', { userId });
 
-    // Create cache key - includes userId for privacy
-    const cacheKey = `enrolled:${userId}`;
+  const cacheKey = `enrolled:${userId}`;
 
-    // Use stale-while-revalidate pattern with shorter TTL for private data (1h)
-    const result = await cache.getWithStaleCache(
-      cacheKey,
-      async () => {
-        // Fetch from API
-        const apiResponse = await courseraClient.get<{
-          enrolledCourses: unknown[];
-          meta: { totalEnrolled: number; completedCount: number };
-        }>(`/api/users/${userId}/enrolled-courses`);
+  return cache.getWithStaleCache(
+    cacheKey,
+    async () => {
+      const response = await courseraClient.get<MembershipsResponse>(
+        '/api/memberships.v1?q=me&includes=courseId,grade&fields=courseId,enrolledTimestamp,lastActivityTimestamp,grade&limit=100'
+      );
 
-        if (!apiResponse) {
-          throw new Error('Failed to fetch enrolled courses');
-        }
+      if (!response) throw new Error('Failed to fetch enrollments from Coursera');
 
-        // Parse enrolled courses
-        const enrolledCourses = parseEnrolledCourses(apiResponse.enrolledCourses || []);
+      const memberships = response.elements ?? [];
+      const completed = memberships.filter(
+        (m) => m.grade === 'PASS' || m.grade === 'DISTINCTION'
+      );
 
-        return {
-          courses: enrolledCourses,
-          totalEnrolled: apiResponse.meta?.totalEnrolled || 0,
-          completedCount: apiResponse.meta?.completedCount || 0,
-        };
-      },
-      1 * 60 * 60 // 1 hour TTL for private data
-    );
+      const courses = memberships.map((m) => ({
+        courseId: m.courseId,
+        membershipId: m.id,
+        enrolledAt: m.enrolledTimestamp ? new Date(m.enrolledTimestamp).toISOString() : null,
+        lastActivityAt: m.lastActivityTimestamp ? new Date(m.lastActivityTimestamp).toISOString() : null,
+        grade: m.grade ?? null,
+        courseUrl: `https://www.coursera.org/learn/${m.courseId}`,
+      }));
 
-    logger.info('Enrolled courses fetched', {
-      userId,
-      count: result.courses.length,
-      completed: result.completedCount,
-    });
-
-    return result;
-  } catch (error) {
-    logger.error('Failed to fetch enrolled courses', {
-      userId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw error;
-  }
+      return {
+        courses,
+        totalEnrolled: response.paging?.total ?? courses.length,
+        completedCount: completed.length,
+      };
+    },
+    60 * 60 // 1 hour TTL for private data
+  );
 }
 
 export async function getProgress(
@@ -78,56 +99,40 @@ export async function getProgress(
   cache: CacheService,
   userId: string,
   courseId: string
-): Promise<Progress> {
-  try {
-    if (!userId || userId.length === 0) {
-      throw new Error('userId is required');
-    }
+): Promise<ProgressResult> {
+  if (!userId?.trim()) throw new Error('userId is required');
+  if (!courseId?.trim()) throw new Error('courseId is required');
 
-    if (!courseId || courseId.length === 0) {
-      throw new Error('courseId is required');
-    }
+  logger.info('Fetching course progress', { userId, courseId });
 
-    logger.info('Fetching course progress', { userId, courseId });
+  const cacheKey = `progress:${userId}:${courseId}`;
 
-    // Create cache key including userId for privacy
-    const cacheKey = `progress:${userId}:${courseId}`;
+  return cache.getWithStaleCache(
+    cacheKey,
+    async () => {
+      const response = await courseraClient.get<{ progressSummary?: CourseProgressV2['progressSummary'] }>(
+        `/api/opencourse.v1/user/${encodeURIComponent(userId)}/course/${encodeURIComponent(courseId)}/progressV2?fields=progressSummary`
+      );
 
-    // Use stale-while-revalidate pattern with 1h TTL
-    const progress = await cache.getWithStaleCache(
-      cacheKey,
-      async () => {
-        // Fetch from API
-        const apiResponse = await courseraClient.get<unknown>(
-          `/api/users/${userId}/courses/${courseId}/progress`
-        );
+      if (!response) throw new Error('Failed to fetch progress from Coursera');
 
-        if (!apiResponse) {
-          throw new Error('Failed to fetch progress');
-        }
+      const summary = response.progressSummary ?? {};
+      const completed = summary.numCompletedItems ?? 0;
+      const total = summary.numTotalItems ?? 0;
+      const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-        // Parse progress
-        return parseProgress(apiResponse);
-      },
-      1 * 60 * 60 // 1 hour TTL for private data
-    );
-
-    logger.info('Progress fetched', {
-      userId,
-      courseId,
-      percent: progress.percent,
-      currentWeek: progress.currentWeek,
-    });
-
-    return progress;
-  } catch (error) {
-    logger.error('Failed to fetch progress', {
-      userId,
-      courseId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw error;
-  }
+      return {
+        courseId,
+        userId,
+        completedItems: completed,
+        totalItems: total,
+        completedModules: summary.numCompletedModules ?? 0,
+        totalModules: summary.numTotalModules ?? 0,
+        percentComplete: percent,
+      };
+    },
+    60 * 60 // 1 hour TTL
+  );
 }
 
 export async function getMultipleProgress(
@@ -135,29 +140,10 @@ export async function getMultipleProgress(
   cache: CacheService,
   userId: string,
   courseIds: string[]
-): Promise<Progress[]> {
-  try {
-    logger.info('Fetching progress for multiple courses', {
-      userId,
-      count: courseIds.length,
-    });
+): Promise<ProgressResult[]> {
+  if (!userId?.trim()) throw new Error('userId is required');
 
-    const progressList = await Promise.all(
-      courseIds.map((id) => getProgress(courseraClient, cache, userId, id))
-    );
+  logger.info('Fetching progress for multiple courses', { userId, count: courseIds.length });
 
-    logger.info('Multiple progress fetched', {
-      userId,
-      count: progressList.length,
-    });
-
-    return progressList;
-  } catch (error) {
-    logger.error('Failed to fetch multiple progress', {
-      userId,
-      count: courseIds.length,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw error;
-  }
+  return Promise.all(courseIds.map((id) => getProgress(courseraClient, cache, userId, id)));
 }

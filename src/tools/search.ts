@@ -1,23 +1,9 @@
-import { logger } from '../utils/logger';
-import { CourseraClient } from '../services/courseraClient';
-import { CacheService } from '../services/cache';
-import { SearchCourseParamsSchema, SearchProgramParamsSchema } from '../types/schemas';
-import type { SearchCourseParams, SearchProgramParams } from '../types/schemas';
-
-// Coursera public API response shapes
-interface CourseraApiCourse {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  level?: string;
-  primaryLanguages?: string[];
-  certificates?: string[];
-  workload?: string;
-  domainTypes?: { domainId: string; subdomainId: string }[];
-  photoUrl?: string;
-  partnerIds?: string[];
-}
+import { logger } from '../utils/logger.js';
+import { CourseraClient } from '../services/courseraClient.js';
+import { CacheService } from '../services/cache.js';
+import { CatalogIndex, type CatalogCourse } from '../services/catalogIndex.js';
+import { SearchCourseParamsSchema, SearchProgramParamsSchema } from '../types/schemas.js';
+import type { SearchCourseParams, SearchProgramParams } from '../types/schemas.js';
 
 interface CourseraApiSpecialization {
   id: string;
@@ -34,21 +20,15 @@ interface CourseraApiResponse<T> {
   paging?: { total?: number; next?: string };
 }
 
-// Maps Coursera API level strings to our level enum
 function mapLevel(raw?: string): 'beginner' | 'intermediate' | 'advanced' | 'mixed' {
   switch (raw?.toUpperCase()) {
-    case 'BEGINNER':
-      return 'beginner';
-    case 'INTERMEDIATE':
-      return 'intermediate';
-    case 'ADVANCED':
-      return 'advanced';
-    default:
-      return 'mixed';
+    case 'BEGINNER': return 'beginner';
+    case 'INTERMEDIATE': return 'intermediate';
+    case 'ADVANCED': return 'advanced';
+    default: return 'mixed';
   }
 }
 
-// Parses workload string ("4 weeks of study", "2 hours") to an approximate week count
 function parseWeeks(workload?: string): number {
   if (!workload) return 4;
   const lower = workload.toLowerCase();
@@ -59,8 +39,7 @@ function parseWeeks(workload?: string): number {
   return 4;
 }
 
-// Transform Coursera API course → our domain type (flexible, avoids strict parser)
-function mapApiCourse(raw: CourseraApiCourse) {
+function mapApiCourse(raw: CatalogCourse) {
   return {
     id: raw.id,
     name: raw.name,
@@ -95,7 +74,6 @@ function mapApiSpecialization(raw: CourseraApiSpecialization) {
   };
 }
 
-const COURSE_FIELDS = 'name,slug,description,level,primaryLanguages,certificates,workload,domainTypes,photoUrl,partnerIds';
 const SPEC_FIELDS = 'name,slug,description,tagline,courseIds,partnerLogo';
 
 export interface SearchResult<T> {
@@ -103,52 +81,39 @@ export interface SearchResult<T> {
   total: number;
   hasMore: boolean;
   query: string;
+  catalogSize?: number;
   note?: string;
 }
 
 export async function searchCourses(
-  courseraClient: CourseraClient,
+  _courseraClient: CourseraClient,
   cache: CacheService,
+  catalogIndex: CatalogIndex,
   params: SearchCourseParams & { query: string }
 ): Promise<SearchResult<ReturnType<typeof mapApiCourse>>> {
   const validatedParams = SearchCourseParamsSchema.parse(params);
   const query = (validatedParams.query ?? '').toLowerCase().trim();
   const limit = validatedParams.limit ?? 10;
-  const cacheKey = `search:courses:${query}:${limit}:${validatedParams.level ?? ''}:${validatedParams.language ?? ''}`;
+  const cacheKey = `search:courses:v2:${query}:${limit}:${validatedParams.level ?? ''}:${validatedParams.language ?? ''}`;
 
-  logger.info('Searching courses', { query, limit });
+  // Map schema level (includes 'professional') to catalog index level
+  const catalogLevel = (() => {
+    const l = validatedParams.level;
+    if (l === 'beginner' || l === 'intermediate' || l === 'advanced') return l;
+    return undefined; // 'mixed' and 'professional' → no level filter
+  })();
+
+  logger.info('Searching courses via catalog index', { query, limit });
 
   return cache.getWithStaleCache(
     cacheKey,
     async () => {
-      // Coursera public API has no text search — fetch 3 catalog pages in parallel and filter
-      const pages = await Promise.all(
-        [0, 100, 200].map((start) =>
-          courseraClient.get<CourseraApiResponse<CourseraApiCourse>>(
-            `/api/courses.v1?limit=100&start=${start}&fields=${COURSE_FIELDS}`
-          )
-        )
-      );
-      const elements = pages.flatMap((p) => p?.elements ?? []);
-
-      // Filter by query against name and description
-      let filtered = elements.filter((c) => {
-        const haystack = `${c.name} ${c.description ?? ''}`.toLowerCase();
-        return haystack.includes(query);
+      const filtered = await catalogIndex.search(query, {
+        level: catalogLevel,
+        language: validatedParams.language ?? undefined,
       });
 
-      // Apply level filter
-      if (validatedParams.level) {
-        filtered = filtered.filter((c) => mapLevel(c.level) === validatedParams.level);
-      }
-
-      // Apply language filter
-      if (validatedParams.language) {
-        filtered = filtered.filter((c) =>
-          c.primaryLanguages?.includes(validatedParams.language as string)
-        );
-      }
-
+      const status = await catalogIndex.getStatus();
       const items = filtered.slice(0, limit).map(mapApiCourse);
 
       return {
@@ -156,11 +121,11 @@ export async function searchCourses(
         total: filtered.length,
         hasMore: filtered.length > limit,
         query: validatedParams.query ?? '',
-        note:
-          'Results are filtered from the first 150 catalog entries. For full search, Coursera authentication is required.',
+        catalogSize: status.total,
       };
     },
-    24 * 60 * 60
+    // Short cache TTL for search results (catalog index handles its own freshness)
+    60 * 60 // 1 hour
   );
 }
 

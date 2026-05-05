@@ -1,143 +1,130 @@
-import { logger } from '../utils/logger';
-import { CourseraClient } from '../services/courseraClient';
-import { CacheService } from '../services/cache';
-import { parseCourses } from '../services/parser';
-import type { Course } from '../types/schemas';
+import { logger } from '../utils/logger.js';
+import { CourseraClient } from '../services/courseraClient.js';
+import { CacheService } from '../services/cache.js';
+import { CatalogIndex, type CatalogCourse } from '../services/catalogIndex.js';
+import { getEnrolledCourses } from './enrolled.js';
 
-export interface RecommendedCourse extends Course {
+export interface RecommendedCourse {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  level: string;
+  language: string;
+  certificate: boolean;
+  courseUrl: string;
+  domains: string[];
   recommendationReason: string;
-  matchScore?: number;
 }
 
 export interface RecommendationsResult {
   courses: RecommendedCourse[];
   reason: string;
-}
-
-export interface RecommendationsParams {
-  limit?: number;
+  basedOnEnrollments: number;
 }
 
 export async function getRecommendations(
   courseraClient: CourseraClient,
   cache: CacheService,
+  catalogIndex: CatalogIndex,
   userId: string,
-  params?: RecommendationsParams
+  params?: { limit?: number }
 ): Promise<RecommendationsResult> {
-  try {
-    if (!userId || userId.length === 0) {
-      throw new Error('userId is required');
-    }
+  if (!userId?.trim()) throw new Error('userId is required');
 
-    const limit = params?.limit !== undefined ? params.limit : 10;
+  const limit = Math.min(Math.max(params?.limit ?? 10, 1), 50);
 
-    if (limit < 1 || limit > 100) {
-      throw new Error('limit must be between 1 and 100');
-    }
+  logger.info('Fetching recommendations', { userId, limit });
 
-    logger.info('Fetching recommendations', { userId, limit });
+  const cacheKey = `recommendations:v2:${userId}:${limit}`;
 
-    // Create cache key - includes userId for privacy
-    const cacheKey = `recommendations:${userId}`;
+  return cache.getWithStaleCache(
+    cacheKey,
+    async () => {
+      // Step 1: get enrolled courses to find their IDs
+      const enrolled = await getEnrolledCourses(courseraClient, cache, userId);
+      const enrolledCourseIds = new Set(enrolled.courses.map((c) => c.courseId));
 
-    // Use stale-while-revalidate pattern with longer TTL (6h)
-    // Recommendations are less personal than progress, but still private
-    const result = await cache.getWithStaleCache(
-      cacheKey,
-      async () => {
-        // Fetch from API
-        const apiResponse = await courseraClient.get<{
-          recommendations: unknown[];
-          reason: string;
-        }>(`/api/users/${userId}/recommendations`, {
-          params: { limit },
-        });
-
-        if (!apiResponse) {
-          throw new Error('Failed to fetch recommendations');
-        }
-
-        // Parse courses
-        const courses = parseCourses(apiResponse.recommendations || []) as RecommendedCourse[];
-
-        // Add recommendation reasons (v1.0: simple, v2.0: would use ML)
-        const recommendedCoursesWithReason = courses.map((course, index) => ({
-          ...course,
-          recommendationReason: generateRecommendationReason(course, index),
-          matchScore: calculateMatchScore(course),
-        }));
-
+      if (enrolledCourseIds.size === 0) {
         return {
-          courses: recommendedCoursesWithReason.slice(0, limit),
-          reason: apiResponse.reason || 'Based on your learning history and skills',
+          courses: [],
+          reason: 'No enrolled courses found. Enroll in some courses to get recommendations.',
+          basedOnEnrollments: 0,
         };
-      },
-      6 * 60 * 60 // 6 hour TTL for recommendations
-    );
+      }
 
-    logger.info('Recommendations fetched', {
-      userId,
-      count: result.courses.length,
-      reason: result.reason,
-    });
+      // Step 2: find domains from enrolled courses in the catalog
+      await catalogIndex.ensureIndex();
+      const domainFrequency = new Map<string, number>();
 
-    return result;
-  } catch (error) {
-    logger.error('Failed to fetch recommendations', {
-      userId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw error;
-  }
+      for (const courseId of enrolledCourseIds) {
+        const catalogCourse = catalogIndex.getCourseBySlug(courseId);
+        if (catalogCourse?.domainTypes) {
+          for (const dt of catalogCourse.domainTypes) {
+            const domain = dt.subdomainId || dt.domainId;
+            domainFrequency.set(domain, (domainFrequency.get(domain) ?? 0) + 1);
+          }
+        }
+      }
+
+      // Step 3: search catalog for courses in those domains, exclude already enrolled
+      let candidates: CatalogCourse[];
+
+      if (domainFrequency.size > 0) {
+        const topDomains = [...domainFrequency.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([d]) => d);
+
+        const allCatalogCourses = await catalogIndex.search('', {});
+        candidates = allCatalogCourses.filter((c) => {
+          if (enrolledCourseIds.has(c.id) || enrolledCourseIds.has(c.slug)) return false;
+          return c.domainTypes?.some(
+            (dt) => topDomains.includes(dt.subdomainId) || topDomains.includes(dt.domainId)
+          );
+        });
+      } else {
+        // Fallback: return popular courses (first N from catalog that aren't enrolled)
+        const allCatalogCourses = await catalogIndex.search('', {});
+        candidates = allCatalogCourses.filter(
+          (c) => !enrolledCourseIds.has(c.id) && !enrolledCourseIds.has(c.slug)
+        );
+      }
+
+      const courses: RecommendedCourse[] = candidates.slice(0, limit).map((c) => ({
+        id: c.id,
+        name: c.name,
+        slug: c.slug,
+        description: c.description ?? 'No description available.',
+        level: mapLevel(c.level),
+        language: c.primaryLanguages?.[0] ?? 'en',
+        certificate: (c.certificates?.length ?? 0) > 0,
+        courseUrl: `https://www.coursera.org/learn/${c.slug}`,
+        domains: c.domainTypes?.map((d) => d.subdomainId ?? d.domainId) ?? [],
+        recommendationReason:
+          domainFrequency.size > 0
+            ? 'Matches domains from your enrolled courses'
+            : 'Popular course you haven\'t tried yet',
+      }));
+
+      return {
+        courses,
+        reason:
+          domainFrequency.size > 0
+            ? `Based on ${enrolledCourseIds.size} enrolled course(s) — matching your domain interests`
+            : `Based on ${enrolledCourseIds.size} enrolled course(s) — explore new areas`,
+        basedOnEnrollments: enrolledCourseIds.size,
+      };
+    },
+    6 * 60 * 60 // 6 hours
+  );
 }
 
-/**
- * Simple recommendation reason generation (v1.0)
- * In v2.0, this would use machine learning based on user preferences
- */
-function generateRecommendationReason(course: Course, position: number): string {
-  if (position === 0) {
-    return 'Top match for your skill level';
+function mapLevel(raw?: string): string {
+  switch (raw?.toUpperCase()) {
+    case 'BEGINNER': return 'beginner';
+    case 'INTERMEDIATE': return 'intermediate';
+    case 'ADVANCED': return 'advanced';
+    default: return 'mixed';
   }
-
-  if (course.rating && course.rating > 4.7) {
-    return 'Highly rated by learners like you';
-  }
-
-  if (course.enrollments > 100000) {
-    return 'Popular course in your interest area';
-  }
-
-  if (course.skills && course.skills.length > 0) {
-    return `Teaches ${course.skills[0].name} skills`;
-  }
-
-  return 'Recommended based on your profile';
-}
-
-/**
- * Simple match score calculation (v1.0)
- * In v2.0, this would use ML algorithms
- */
-function calculateMatchScore(course: Course): number {
-  let score = 50; // Base score
-
-  // Rating factor
-  if (course.rating) {
-    score += Math.min(course.rating * 10, 25);
-  }
-
-  // Popularity factor
-  if (course.enrollments > 50000) {
-    score += 10;
-  } else if (course.enrollments > 10000) {
-    score += 5;
-  }
-
-  // Level factor (assuming intermediate users)
-  if (course.level === 'intermediate') {
-    score += 10;
-  }
-
-  return Math.min(score, 100);
 }

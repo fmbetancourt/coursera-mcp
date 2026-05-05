@@ -8,7 +8,9 @@ import { EncryptionService } from './encryption';
 
 export interface Session {
   email: string;
-  sessionToken: string;
+  userId?: string;       // Coursera numeric user ID
+  sessionToken: string;  // Encrypted CAUTH cookie or legacy token
+  cauthMode?: boolean;   // true = sessionToken holds encrypted CAUTH cookie
   refreshToken?: string;
   expiresAt: number;
   lastRefreshed: number;
@@ -32,21 +34,55 @@ export class AuthService {
     this.loadSessions();
   }
 
-  initiateLogin(email: string, password: string): void {
+  initiateLogin(email: string, _password: string): void {
+    logger.info('Initiating login (CAUTH mode — use coursera-mcp init instead)', { email });
+  }
+
+  async validateCauthCookie(cauthCookie: string): Promise<{ userId: string; displayName: string }> {
+    this.courseraClient.setCauthCookie(cauthCookie);
     try {
-      logger.info('Initiating login', { email });
+      const response = await this.courseraClient.get<{
+        elements?: Array<{ id: string; fullName?: string; externalId?: string }>;
+      }>('/api/users/v1/me?fields=id,fullName,externalId');
 
-      // This is a stub - actual implementation would call Coursera API
-      // For now, just log the attempt
-      logger.debug('Login stub called', { email, passwordLength: password.length });
+      const user = response?.elements?.[0];
+      if (!user?.id) {
+        throw new Error('Could not retrieve user info — CAUTH cookie may be invalid or expired');
+      }
+      return { userId: String(user.id), displayName: user.fullName ?? 'Coursera User' };
+    } finally {
+      this.courseraClient.clearCauthCookie();
+    }
+  }
 
-      // In T1.22 (TOTP implementation), this will be extended
-    } catch (error) {
-      logger.error('Login initiation failed', {
-        email,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
+  saveCauthSession(userId: string, cauthCookie: string): void {
+    const encryptedCookie = this.encryptSessionToken(cauthCookie);
+    const session: Session = {
+      email: userId,
+      userId,
+      sessionToken: encryptedCookie,
+      cauthMode: true,
+      expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days
+      lastRefreshed: Date.now(),
+    };
+    this.sessions.set(userId, session);
+    this.saveSessions();
+    logger.info('CAUTH session saved', { userId });
+  }
+
+  injectAuthIntoClient(): void {
+    const active = this.getActiveSessions();
+    if (active.length === 0) return;
+
+    const session = this.sessions.get(active[0]);
+    if (!session) return;
+
+    if (session.cauthMode) {
+      const cookie = this.decryptSessionToken(session.sessionToken);
+      this.courseraClient.setCauthCookie(cookie);
+    } else {
+      const token = this.decryptSessionToken(session.sessionToken);
+      this.courseraClient.setSessionToken(token);
     }
   }
 

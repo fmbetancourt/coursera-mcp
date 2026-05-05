@@ -53,6 +53,7 @@ export function requireAuth(
       }
     }
 
+    authService.injectAuthIntoClient();
     logger.info('Authentication successful', { userId });
 
     return {

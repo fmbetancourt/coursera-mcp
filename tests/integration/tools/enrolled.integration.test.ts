@@ -4,30 +4,20 @@ import path from 'path';
 import { getEnrolledCourses, getProgress, getMultipleProgress } from '../../../src/tools/enrolled';
 import { CacheService } from '../../../src/services/cache';
 import { CourseraClient } from '../../../src/services/courseraClient';
-import { mockEnrolledCourses, mockProgress, mockPrograms } from '../../fixtures';
 
-// Mock CourseraClient for integration tests
 class MockCourseraClient extends CourseraClient {
   private mockResponses: Map<string, unknown> = new Map();
-
-  constructor() {
-    super('https://api.coursera.org', '');
-  }
 
   setMockResponse(key: string, response: unknown): void {
     this.mockResponses.set(key, response);
   }
 
-  getMockResponse(key: string): unknown | undefined {
-    return this.mockResponses.get(key);
-  }
-
-  async get<T>(url: string, config?: any): Promise<T> {
-    const response = this.getMockResponse(url);
-    if (!response) {
-      throw new Error(`No mock response for ${url}`);
+  async get<T>(url: string): Promise<T> {
+    // Match by prefix to handle query params
+    for (const [key, val] of this.mockResponses.entries()) {
+      if (url.startsWith(key) || url === key) return val as T;
     }
-    return response as T;
+    throw new Error(`No mock response for ${url}`);
   }
 }
 
@@ -35,6 +25,37 @@ const testCacheDir = path.join(process.cwd(), '.test-enrolled-cache');
 let cache: CacheService;
 let mockClient: MockCourseraClient;
 const testUserId = 'test-user-123';
+
+// Real Coursera memberships.v1 response shape
+const mockMembershipsResponse = {
+  elements: [
+    {
+      id: `${testUserId}~course-abc`,
+      courseId: 'course-abc',
+      enrolledTimestamp: 1700000000000,
+      lastActivityTimestamp: 1701000000000,
+      grade: null,
+    },
+    {
+      id: `${testUserId}~course-xyz`,
+      courseId: 'course-xyz',
+      enrolledTimestamp: 1699000000000,
+      lastActivityTimestamp: null,
+      grade: 'PASS',
+    },
+  ],
+  paging: { total: 2 },
+};
+
+// Real Coursera progressV2 response shape
+const makeProgressResponse = (completed: number, total: number) => ({
+  progressSummary: {
+    numCompletedItems: completed,
+    numTotalItems: total,
+    numCompletedModules: Math.floor(completed / 10),
+    numTotalModules: Math.ceil(total / 10),
+  },
+});
 
 describe('Integration: Enrolled Courses Tools', () => {
   beforeEach(() => {
@@ -48,79 +69,55 @@ describe('Integration: Enrolled Courses Tools', () => {
   });
 
   describe('getEnrolledCourses', () => {
-    it('should fetch and parse enrolled courses', async () => {
-      const mockResponse = {
-        enrolledCourses: mockEnrolledCourses.slice(0, 2),
-        meta: {
-          totalEnrolled: 5,
-          completedCount: 1,
-        },
-      };
-
-      mockClient.setMockResponse(
-        `/api/users/${testUserId}/enrolled-courses`,
-        mockResponse
-      );
+    it('should fetch and parse enrolled courses from memberships API', async () => {
+      mockClient.setMockResponse('/api/memberships.v1', mockMembershipsResponse);
 
       const result = await getEnrolledCourses(mockClient, cache, testUserId);
 
       expect(result).toBeDefined();
       expect(result.courses).toBeDefined();
       expect(result.courses.length).toBe(2);
-      expect(result.totalEnrolled).toBe(5);
+      expect(result.totalEnrolled).toBe(2);
+      expect(result.courses[0].courseId).toBe('course-abc');
+      expect(result.courses[0].courseUrl).toContain('coursera.org/learn/');
+      expect(result.courses[0].enrolledAt).toBeDefined();
+    });
+
+    it('should count completed courses correctly', async () => {
+      mockClient.setMockResponse('/api/memberships.v1', mockMembershipsResponse);
+
+      const result = await getEnrolledCourses(mockClient, cache, testUserId);
+
+      // Only course-xyz has grade PASS
       expect(result.completedCount).toBe(1);
-      expect(result.courses[0].courseId).toBeDefined();
     });
 
     it('should use 1-hour cache TTL for private data', async () => {
-      const mockResponse = {
-        enrolledCourses: mockEnrolledCourses.slice(0, 1),
-        meta: {
-          totalEnrolled: 3,
-          completedCount: 0,
-        },
-      };
+      mockClient.setMockResponse('/api/memberships.v1', mockMembershipsResponse);
 
-      mockClient.setMockResponse(
-        `/api/users/${testUserId}/enrolled-courses`,
-        mockResponse
-      );
+      await getEnrolledCourses(mockClient, cache, testUserId);
 
-      // First call
-      const result1 = await getEnrolledCourses(mockClient, cache, testUserId);
-      expect(result1.courses.length).toBe(1);
-
-      // Verify cache key includes userId
       const cacheKey = `enrolled:${testUserId}`;
       const cached = cache.get(cacheKey);
       expect(cached).toBeDefined();
     });
 
     it('should include userId in cache key for privacy', async () => {
-      const mockResponse = {
-        enrolledCourses: mockEnrolledCourses.slice(0, 1),
-        meta: { totalEnrolled: 1, completedCount: 0 },
+      const anotherUserId = 'another-user-456';
+      const otherResponse = {
+        elements: [{ id: `${anotherUserId}~other-course`, courseId: 'other-course', grade: null }],
+        paging: { total: 1 },
       };
 
-      mockClient.setMockResponse(
-        `/api/users/${testUserId}/enrolled-courses`,
-        mockResponse
-      );
+      mockClient.setMockResponse('/api/memberships.v1', mockMembershipsResponse);
 
-      const anotherUserId = 'another-user-456';
-      mockClient.setMockResponse(
-        `/api/users/${anotherUserId}/enrolled-courses`,
-        {
-          enrolledCourses: mockEnrolledCourses.slice(1, 2),
-          meta: { totalEnrolled: 1, completedCount: 0 },
-        }
-      );
+      await getEnrolledCourses(mockClient, cache, testUserId);
 
-      // Different users should have separate cache entries
-      const result1 = await getEnrolledCourses(mockClient, cache, testUserId);
+      // Swap mock response for second user
+      mockClient.setMockResponse('/api/memberships.v1', otherResponse);
       const result2 = await getEnrolledCourses(mockClient, cache, anotherUserId);
 
-      expect(result1.courses[0].courseId).not.toBe(result2.courses[0].courseId);
+      expect(result2.courses[0].courseId).toBe('other-course');
     });
 
     it('should throw error when userId is missing', async () => {
@@ -133,11 +130,8 @@ describe('Integration: Enrolled Courses Tools', () => {
       }
     });
 
-    it('should handle API error gracefully', async () => {
-      mockClient.setMockResponse(
-        `/api/users/${testUserId}/enrolled-courses`,
-        null
-      );
+    it('should throw error when API returns null', async () => {
+      mockClient.setMockResponse('/api/memberships.v1', null);
 
       try {
         await getEnrolledCourses(mockClient, cache, testUserId);
@@ -148,15 +142,10 @@ describe('Integration: Enrolled Courses Tools', () => {
     });
 
     it('should handle empty enrolled courses', async () => {
-      const mockResponse = {
-        enrolledCourses: [],
-        meta: { totalEnrolled: 0, completedCount: 0 },
-      };
-
-      mockClient.setMockResponse(
-        `/api/users/${testUserId}/enrolled-courses`,
-        mockResponse
-      );
+      mockClient.setMockResponse('/api/memberships.v1', {
+        elements: [],
+        paging: { total: 0 },
+      });
 
       const result = await getEnrolledCourses(mockClient, cache, testUserId);
       expect(result.courses.length).toBe(0);
@@ -166,46 +155,48 @@ describe('Integration: Enrolled Courses Tools', () => {
   });
 
   describe('getProgress', () => {
-    it('should fetch course progress with completion percent', async () => {
-      const courseId = 'python-basics';
-      const progressData = {
-        courseId,
-        userId: testUserId,
-        percent: 75,
-        currentWeek: 3,
-        totalWeeks: 4,
-        upcomingDeadlines: [],
-        lastAccessedDate: new Date(),
-      };
+    const courseId = 'python-basics';
 
+    it('should fetch progress from opencourse progressV2 endpoint', async () => {
       mockClient.setMockResponse(
-        `/api/users/${testUserId}/courses/${courseId}/progress`,
-        progressData
+        `/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
+        makeProgressResponse(30, 40)
       );
 
       const result = await getProgress(mockClient, cache, testUserId, courseId);
 
       expect(result).toBeDefined();
-      expect(result.percent).toBeDefined();
-      expect(result.percent).toBeGreaterThanOrEqual(0);
-      expect(result.percent).toBeLessThanOrEqual(100);
-      expect(result.currentWeek).toBeDefined();
+      expect(result.percentComplete).toBe(75); // 30/40 = 75%
+      expect(result.completedItems).toBe(30);
+      expect(result.totalItems).toBe(40);
+      expect(result.courseId).toBe(courseId);
+      expect(result.userId).toBe(testUserId);
+    });
+
+    it('should calculate percent correctly', async () => {
+      mockClient.setMockResponse(
+        `/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
+        makeProgressResponse(1, 4)
+      );
+
+      const result = await getProgress(mockClient, cache, testUserId, courseId);
+      expect(result.percentComplete).toBe(25);
+    });
+
+    it('should return 0 percent when no items completed', async () => {
+      mockClient.setMockResponse(
+        `/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
+        makeProgressResponse(0, 10)
+      );
+
+      const result = await getProgress(mockClient, cache, testUserId, courseId);
+      expect(result.percentComplete).toBe(0);
     });
 
     it('should include userId and courseId in cache key', async () => {
-      const courseId = 'python-basics';
-      const progressData = {
-        courseId,
-        userId: testUserId,
-        percent: 50,
-        currentWeek: 2,
-        totalWeeks: 4,
-        upcomingDeadlines: [],
-        lastAccessedDate: new Date(),
-      };
       mockClient.setMockResponse(
-        `/api/users/${testUserId}/courses/${courseId}/progress`,
-        progressData
+        `/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
+        makeProgressResponse(5, 10)
       );
 
       await getProgress(mockClient, cache, testUserId, courseId);
@@ -217,7 +208,7 @@ describe('Integration: Enrolled Courses Tools', () => {
 
     it('should throw error when userId is missing', async () => {
       try {
-        await getProgress(mockClient, cache, '', 'course-123');
+        await getProgress(mockClient, cache, '', courseId);
         expect.unreachable();
       } catch (error) {
         expect((error as Error).message).toContain('userId is required');
@@ -233,74 +224,45 @@ describe('Integration: Enrolled Courses Tools', () => {
       }
     });
 
-    it('should return progress with current week and completion', async () => {
-      const courseId = 'data-science-101';
-      const progressData = {
-        courseId,
-        userId: testUserId,
-        percent: 45,
-        currentWeek: 3,
-        totalWeeks: 8,
-        upcomingDeadlines: [],
-        lastAccessedDate: new Date(),
-      };
-
+    it('should handle missing progressSummary gracefully', async () => {
       mockClient.setMockResponse(
-        `/api/users/${testUserId}/courses/${courseId}/progress`,
-        progressData
+        `/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
+        {}
       );
 
       const result = await getProgress(mockClient, cache, testUserId, courseId);
-
-      expect(result.percent).toBe(45);
-      expect(result.currentWeek).toBe(3);
+      expect(result.percentComplete).toBe(0);
+      expect(result.completedItems).toBe(0);
+      expect(result.totalItems).toBe(0);
     });
 
     it('should separate cache for different courses', async () => {
-      const course1 = 'python-basics';
-      const course2 = 'javascript-advanced';
+      const course2 = 'data-science-101';
 
       mockClient.setMockResponse(
-        `/api/users/${testUserId}/courses/${course1}/progress`,
-        {
-          courseId: course1,
-          userId: testUserId,
-          percent: 50,
-          currentWeek: 4,
-          totalWeeks: 8,
-          upcomingDeadlines: [],
-          lastAccessedDate: new Date(),
-        }
+        `/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
+        makeProgressResponse(20, 40)
       );
-
       mockClient.setMockResponse(
-        `/api/users/${testUserId}/courses/${course2}/progress`,
-        {
-          courseId: course2,
-          userId: testUserId,
-          percent: 25,
-          currentWeek: 2,
-          totalWeeks: 8,
-          upcomingDeadlines: [],
-          lastAccessedDate: new Date(),
-        }
+        `/api/opencourse.v1/user/${testUserId}/course/${course2}/progressV2`,
+        makeProgressResponse(5, 40)
       );
 
-      const result1 = await getProgress(mockClient, cache, testUserId, course1);
-      const result2 = await getProgress(mockClient, cache, testUserId, course2);
+      const r1 = await getProgress(mockClient, cache, testUserId, courseId);
+      const r2 = await getProgress(mockClient, cache, testUserId, course2);
 
-      expect(result1.percent).toBe(50);
-      expect(result2.percent).toBe(25);
+      expect(r1.percentComplete).toBe(50);
+      expect(r2.percentComplete).toBe(13); // floor(5/40*100)=12 → round = 13
     });
 
-    it('should handle API error gracefully', async () => {
+    it('should throw error when API returns null', async () => {
       mockClient.setMockResponse(
-        `/api/users/${testUserId}/courses/invalid-course/progress`,
+        `/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
         null
       );
 
       try {
-        await getProgress(mockClient, cache, testUserId, 'invalid-course');
+        await getProgress(mockClient, cache, testUserId, courseId);
         expect.unreachable();
       } catch (error) {
         expect(error).toBeInstanceOf(Error);
@@ -309,82 +271,27 @@ describe('Integration: Enrolled Courses Tools', () => {
   });
 
   describe('getMultipleProgress', () => {
-    it('should fetch progress for multiple courses', async () => {
+    it('should fetch progress for multiple courses in parallel', async () => {
       const courseIds = ['python-basics', 'javascript-advanced', 'data-science-101'];
 
-      courseIds.forEach((courseId, index) => {
+      courseIds.forEach((id, index) => {
         mockClient.setMockResponse(
-          `/api/users/${testUserId}/courses/${courseId}/progress`,
-          {
-            courseId,
-            userId: testUserId,
-            percent: 25 * (index + 1),
-            currentWeek: index + 1,
-            totalWeeks: 8,
-            upcomingDeadlines: [],
-            lastAccessedDate: new Date(),
-          }
+          `/api/opencourse.v1/user/${testUserId}/course/${id}/progressV2`,
+          makeProgressResponse((index + 1) * 10, 40)
         );
       });
 
       const results = await getMultipleProgress(mockClient, cache, testUserId, courseIds);
 
-      expect(results).toBeDefined();
       expect(results.length).toBe(3);
-      expect(results[0].percent).toBe(25);
-      expect(results[1].percent).toBe(50);
-      expect(results[2].percent).toBe(75);
+      expect(results[0].percentComplete).toBe(25);  // 10/40
+      expect(results[1].percentComplete).toBe(50);  // 20/40
+      expect(results[2].percentComplete).toBe(75);  // 30/40
     });
 
     it('should handle empty course list', async () => {
       const results = await getMultipleProgress(mockClient, cache, testUserId, []);
       expect(results.length).toBe(0);
-    });
-
-    it('should handle single course in batch', async () => {
-      const courseId = 'python-basics';
-      mockClient.setMockResponse(
-        `/api/users/${testUserId}/courses/${courseId}/progress`,
-        {
-          courseId,
-          userId: testUserId,
-          percent: 60,
-          currentWeek: 5,
-          totalWeeks: 8,
-          upcomingDeadlines: [],
-          lastAccessedDate: new Date(),
-        }
-      );
-
-      const results = await getMultipleProgress(mockClient, cache, testUserId, [courseId]);
-
-      expect(results.length).toBe(1);
-      expect(results[0].percent).toBe(60);
-    });
-
-    it('should use parallel requests for multiple courses', async () => {
-      const courseIds = ['course-1', 'course-2', 'course-3', 'course-4'];
-
-      courseIds.forEach((courseId) => {
-        mockClient.setMockResponse(
-          `/api/users/${testUserId}/courses/${courseId}/progress`,
-          {
-            courseId,
-            userId: testUserId,
-            percent: Math.random() * 100,
-            currentWeek: 1,
-            totalWeeks: 8,
-            upcomingDeadlines: [],
-            lastAccessedDate: new Date(),
-          }
-        );
-      });
-
-      const startTime = Date.now();
-      await getMultipleProgress(mockClient, cache, testUserId, courseIds);
-      const elapsed = Date.now() - startTime;
-
-      expect(elapsed).toBeLessThan(5000);
     });
 
     it('should throw error if userId is missing', async () => {
@@ -393,104 +300,33 @@ describe('Integration: Enrolled Courses Tools', () => {
         expect.unreachable();
       } catch (error) {
         expect(error).toBeInstanceOf(Error);
+        expect((error as Error).message).toContain('userId is required');
       }
-    });
-
-    it('should batch requests efficiently', async () => {
-      const courseIds = Array.from({ length: 10 }, (_, i) => `course-${i}`);
-
-      courseIds.forEach((courseId) => {
-        mockClient.setMockResponse(
-          `/api/users/${testUserId}/courses/${courseId}/progress`,
-          {
-            courseId,
-            userId: testUserId,
-            percent: 50,
-            currentWeek: 4,
-            totalWeeks: 8,
-            upcomingDeadlines: [],
-            lastAccessedDate: new Date(),
-          }
-        );
-      });
-
-      const results = await getMultipleProgress(mockClient, cache, testUserId, courseIds);
-      expect(results.length).toBe(10);
     });
   });
 
   describe('Stale-While-Revalidate Pattern', () => {
     it('should serve cached data on second request', async () => {
-      const mockResponse = {
-        enrolledCourses: mockEnrolledCourses.slice(0, 1),
-        meta: { totalEnrolled: 1, completedCount: 0 },
-      };
-
-      mockClient.setMockResponse(
-        `/api/users/${testUserId}/enrolled-courses`,
-        mockResponse
-      );
+      mockClient.setMockResponse('/api/memberships.v1', mockMembershipsResponse);
 
       const result1 = await getEnrolledCourses(mockClient, cache, testUserId);
       const result2 = await getEnrolledCourses(mockClient, cache, testUserId);
 
-      expect(result1.courses[0].id).toBe(result2.courses[0].id);
+      expect(result1.courses[0].courseId).toBe(result2.courses[0].courseId);
     });
 
-    it('should maintain data consistency across calls', async () => {
+    it('should maintain progress data consistency across calls', async () => {
       const courseId = 'python-basics';
-      const progressData = {
-        courseId,
-        userId: testUserId,
-        percent: 55,
-        currentWeek: 5,
-        totalWeeks: 8,
-        upcomingDeadlines: [],
-        lastAccessedDate: new Date(),
-      };
-
       mockClient.setMockResponse(
-        `/api/users/${testUserId}/courses/${courseId}/progress`,
-        progressData
+        `/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
+        makeProgressResponse(18, 24)
       );
 
-      const result1 = await getProgress(mockClient, cache, testUserId, courseId);
-      const result2 = await getProgress(mockClient, cache, testUserId, courseId);
+      const r1 = await getProgress(mockClient, cache, testUserId, courseId);
+      const r2 = await getProgress(mockClient, cache, testUserId, courseId);
 
-      expect(result1.percent).toBe(result2.percent);
-      expect(result1.currentWeek).toBe(result2.currentWeek);
-    });
-  });
-
-  describe('Error Recovery', () => {
-    it('should handle missing metadata gracefully', async () => {
-      const mockResponse = {
-        enrolledCourses: mockEnrolledCourses.slice(0, 1),
-        meta: {},
-      };
-
-      mockClient.setMockResponse(
-        `/api/users/${testUserId}/enrolled-courses`,
-        mockResponse
-      );
-
-      const result = await getEnrolledCourses(mockClient, cache, testUserId);
-      expect(result.totalEnrolled).toBe(0);
-      expect(result.completedCount).toBe(0);
-    });
-
-    it('should handle missing enrolledCourses array', async () => {
-      const mockResponse = {
-        meta: { totalEnrolled: 0, completedCount: 0 },
-      };
-
-      mockClient.setMockResponse(
-        `/api/users/${testUserId}/enrolled-courses`,
-        mockResponse
-      );
-
-      const result = await getEnrolledCourses(mockClient, cache, testUserId);
-      expect(result.courses.length).toBe(0);
+      expect(r1.percentComplete).toBe(r2.percentComplete);
+      expect(r1.completedItems).toBe(r2.completedItems);
     });
   });
 });

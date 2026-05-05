@@ -10,11 +10,13 @@ import { logger } from './utils/logger.js';
 import { CourseraClient } from './services/courseraClient.js';
 import { CacheService } from './services/cache.js';
 import { AuthService } from './services/auth.js';
+import { CatalogIndex } from './services/catalogIndex.js';
 import { searchCourses, searchPrograms } from './tools/search.js';
 import { getCourseDetails, getProgramDetails } from './tools/details.js';
 import { getEnrolledCourses, getProgress } from './tools/enrolled.js';
 import { getRecommendations } from './tools/recommendations.js';
 import { requireAuth, AuthenticationError } from './middleware/auth.js';
+import { runInitCLI } from './cli/init.js';
 import path from 'path';
 
 // Initialize services
@@ -23,6 +25,7 @@ const cacheDir = path.join(process.env.HOME || '~', '.coursera-mcp', 'cache');
 const cache = new CacheService(cacheDir);
 const masterPassword = process.env.COURSERA_MASTER_PASSWORD || 'default-master-key';
 const authService = new AuthService(courseraClient, masterPassword);
+const catalogIndex = new CatalogIndex(courseraClient);
 
 logger.info('Coursera MCP services initialized');
 
@@ -146,7 +149,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     switch (name) {
       case 'search_courses':
-        result = await searchCourses(courseraClient, cache, args as Parameters<typeof searchCourses>[2]);
+        result = await searchCourses(courseraClient, cache, catalogIndex, args as Parameters<typeof searchCourses>[3]);
         break;
 
       case 'search_programs':
@@ -180,7 +183,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case 'get_recommendations': {
         const context = requireAuth(authService);
-        result = await getRecommendations(courseraClient, cache, context.userId, args as { limit?: number });
+        result = await getRecommendations(courseraClient, cache, catalogIndex, context.userId, args as { limit?: number });
         break;
       }
 
@@ -220,8 +223,8 @@ process.on('unhandledRejection', (reason: unknown) => {
 
 // Exports for testing — toolHandlers mirrors the MCP tool registry for unit/e2e tests
 export const toolHandlers = {
-  search_courses: (params: Parameters<typeof searchCourses>[2]) =>
-    searchCourses(courseraClient, cache, params),
+  search_courses: (params: Parameters<typeof searchCourses>[3]) =>
+    searchCourses(courseraClient, cache, catalogIndex, params),
   search_programs: (params: Parameters<typeof searchPrograms>[2]) =>
     searchPrograms(courseraClient, cache, params),
   get_course_details: (courseId: string) =>
@@ -238,7 +241,7 @@ export const toolHandlers = {
   },
   get_recommendations: (_userId: string, params?: { limit?: number }) => {
     const context = requireAuth(authService);
-    return getRecommendations(courseraClient, cache, context.userId, params);
+    return getRecommendations(courseraClient, cache, catalogIndex, context.userId, params);
   },
 };
 
@@ -246,6 +249,10 @@ export { courseraClient, cache, authService };
 
 // Self-invoking main — avoids top-level await (required for --format=cjs esbuild output)
 async function main(): Promise<void> {
+  if (process.argv[2] === 'init') {
+    await runInitCLI();
+    return;
+  }
   const transport = new StdioServerTransport();
   await server.connect(transport);
   logger.info('Coursera MCP server started and listening on stdio');
