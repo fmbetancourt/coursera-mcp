@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+# [1.2.0](https://github.com/fmbetancourt/coursera-mcp/compare/v1.1.0...v1.2.0) (2026-05-05)
+
+
+### Bug Fixes
+
+* restore toolHandlers export removed during MCP server refactor ([f3caf77](https://github.com/fmbetancourt/coursera-mcp/commit/f3caf7740f08f7e7a19074ab007dcc9adcf744c4))
+
+
+### Features
+
+* implement MCP protocol server layer ([84b54ab](https://github.com/fmbetancourt/coursera-mcp/commit/84b54ab982f1375d0e30f971f2b964b2a9b782a8))
+
 # [1.1.0](https://github.com/fmbetancourt/coursera-mcp/compare/v1.0.0...v1.1.0) (2026-05-05)
 
 
