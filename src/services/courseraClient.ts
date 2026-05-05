@@ -8,7 +8,7 @@ export class CourseraClient {
   private sessionToken?: string;
   private circuitBreaker: CircuitBreaker<unknown>;
 
-  constructor(baseURL = 'https://www.coursera.org') {
+  constructor(baseURL = 'https://api.coursera.org') {
     this.circuitBreaker = new CircuitBreaker('coursera-api');
 
     this.axiosInstance = axios.create({

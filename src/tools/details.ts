@@ -1,169 +1,183 @@
 import { logger } from '../utils/logger';
 import { CourseraClient } from '../services/courseraClient';
 import { CacheService } from '../services/cache';
-import { parseCourse, parseProgram } from '../services/parser';
-import type { Course, Program } from '../types/schemas';
 
 export class NotFoundError extends Error {
-  constructor(public resourceType: string, public resourceId: string) {
+  constructor(
+    public resourceType: string,
+    public resourceId: string
+  ) {
     super(`${resourceType} not found: ${resourceId}`);
     this.name = 'NotFoundError';
   }
 }
 
+interface CourseraApiCourse {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  level?: string;
+  primaryLanguages?: string[];
+  certificates?: string[];
+  workload?: string;
+  domainTypes?: { domainId: string; subdomainId: string }[];
+  photoUrl?: string;
+  partnerIds?: string[];
+  instructorIds?: string[];
+}
+
+interface CourseraApiSpecialization {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  tagline?: string;
+  courseIds?: string[];
+}
+
+interface CourseraApiResponse<T> {
+  elements: T[];
+  paging?: { total?: number };
+}
+
+function mapLevel(raw?: string): 'beginner' | 'intermediate' | 'advanced' | 'mixed' {
+  switch (raw?.toUpperCase()) {
+    case 'BEGINNER': return 'beginner';
+    case 'INTERMEDIATE': return 'intermediate';
+    case 'ADVANCED': return 'advanced';
+    default: return 'mixed';
+  }
+}
+
+function parseWeeks(workload?: string): number {
+  if (!workload) return 4;
+  const lower = workload.toLowerCase();
+  const weeks = lower.match(/(\d+)\s*week/);
+  if (weeks) return parseInt(weeks[1], 10);
+  const hours = lower.match(/(\d+)\s*hour/);
+  if (hours) return Math.max(1, Math.round(parseInt(hours[1], 10) / 5));
+  return 4;
+}
+
+const COURSE_FIELDS = 'name,slug,description,level,primaryLanguages,certificates,workload,domainTypes,photoUrl,partnerIds,instructorIds';
+const SPEC_FIELDS = 'name,slug,description,tagline,courseIds';
+
 export async function getCourseDetails(
   courseraClient: CourseraClient,
   cache: CacheService,
   courseId: string
-): Promise<Course> {
-  try {
-    if (!courseId || courseId.length === 0) {
-      throw new Error('courseId is required');
-    }
+): Promise<Record<string, unknown>> {
+  if (!courseId?.trim()) throw new Error('courseId is required');
 
-    logger.info('Fetching course details', { courseId });
+  logger.info('Fetching course details', { courseId });
 
-    // Create cache key
-    const cacheKey = `course:${courseId}`;
+  return cache.getWithStaleCache(
+    `course:${courseId}`,
+    async () => {
+      const response = await courseraClient.get<CourseraApiResponse<CourseraApiCourse>>(
+        `/api/courses.v1?ids=${encodeURIComponent(courseId)}&fields=${COURSE_FIELDS}`
+      );
 
-    // Use stale-while-revalidate pattern
-    const course = await cache.getWithStaleCache(
-      cacheKey,
-      async () => {
-        // Fetch from API
-        const apiResponse = await courseraClient.get<unknown>(
-          `/api/courses/${courseId}`
+      const course = response?.elements?.[0];
+
+      if (!course) {
+        // Try searching by slug as fallback
+        const searchResponse = await courseraClient.get<CourseraApiResponse<CourseraApiCourse>>(
+          `/api/courses.v1?limit=150&fields=${COURSE_FIELDS}`
         );
+        const bySlug = searchResponse?.elements?.find(
+          (c) => c.slug === courseId || c.slug.includes(courseId)
+        );
+        if (!bySlug) throw new NotFoundError('Course', courseId);
 
-        if (!apiResponse) {
-          throw new NotFoundError('Course', courseId);
-        }
+        return formatCourse(bySlug);
+      }
 
-        // Parse course
-        return parseCourse(apiResponse);
-      },
-      24 * 60 * 60 // 24 hour TTL
-    );
+      return formatCourse(course);
+    },
+    24 * 60 * 60
+  );
+}
 
-    logger.info('Course details fetched', {
-      courseId,
-      name: course.name,
-      level: course.level,
-    });
-
-    return course;
-  } catch (error) {
-    if (error instanceof NotFoundError) {
-      logger.warn('Course not found', { courseId });
-      throw error;
-    }
-
-    logger.error('Failed to fetch course details', {
-      courseId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw error;
-  }
+function formatCourse(course: CourseraApiCourse): Record<string, unknown> {
+  return {
+    id: course.id,
+    name: course.name,
+    slug: course.slug,
+    description: course.description ?? 'No description available.',
+    level: mapLevel(course.level),
+    language: course.primaryLanguages?.[0] ?? 'en',
+    allLanguages: course.primaryLanguages ?? [],
+    duration: parseWeeks(course.workload),
+    workload: course.workload ?? 'Self-paced',
+    certificate: (course.certificates?.length ?? 0) > 0,
+    certificateTypes: course.certificates ?? [],
+    domains: course.domainTypes?.map((d) => `${d.domainId} / ${d.subdomainId}`) ?? [],
+    photoUrl: course.photoUrl,
+    courseUrl: `https://www.coursera.org/learn/${course.slug}`,
+    instructorCount: course.instructorIds?.length ?? 0,
+  };
 }
 
 export async function getProgramDetails(
   courseraClient: CourseraClient,
   cache: CacheService,
   programId: string
-): Promise<Program> {
-  try {
-    if (!programId || programId.length === 0) {
-      throw new Error('programId is required');
-    }
+): Promise<Record<string, unknown>> {
+  if (!programId?.trim()) throw new Error('programId is required');
 
-    logger.info('Fetching program details', { programId });
+  logger.info('Fetching program details', { programId });
 
-    // Create cache key
-    const cacheKey = `program:${programId}`;
+  return cache.getWithStaleCache(
+    `program:${programId}`,
+    async () => {
+      const response = await courseraClient.get<CourseraApiResponse<CourseraApiSpecialization>>(
+        `/api/onDemandSpecializations.v1?ids=${encodeURIComponent(programId)}&fields=${SPEC_FIELDS}`
+      );
 
-    // Use stale-while-revalidate pattern
-    const program = await cache.getWithStaleCache(
-      cacheKey,
-      async () => {
-        // Fetch from API
-        const apiResponse = await courseraClient.get<unknown>(
-          `/api/programs/${programId}`
+      let spec = response?.elements?.[0];
+
+      if (!spec) {
+        // Fallback: search by slug
+        const listResponse = await courseraClient.get<CourseraApiResponse<CourseraApiSpecialization>>(
+          `/api/onDemandSpecializations.v1?limit=150&fields=${SPEC_FIELDS}`
         );
+        const found = listResponse?.elements?.find(
+          (s) => s.slug === programId || s.slug.includes(programId)
+        );
+        if (!found) throw new NotFoundError('Program', programId);
+        spec = found;
+      }
 
-        if (!apiResponse) {
-          throw new NotFoundError('Program', programId);
-        }
-
-        // Parse program
-        return parseProgram(apiResponse);
-      },
-      24 * 60 * 60 // 24 hour TTL
-    );
-
-    logger.info('Program details fetched', {
-      programId,
-      name: program.name,
-      type: program.type,
-      courseCount: program.courses.length,
-    });
-
-    return program;
-  } catch (error) {
-    if (error instanceof NotFoundError) {
-      logger.warn('Program not found', { programId });
-      throw error;
-    }
-
-    logger.error('Failed to fetch program details', {
-      programId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw error;
-  }
+      return {
+        id: spec.id,
+        name: spec.name,
+        slug: spec.slug,
+        type: 'specialization',
+        description: spec.description ?? spec.tagline ?? 'No description available.',
+        courseCount: spec.courseIds?.length ?? 0,
+        courseIds: spec.courseIds ?? [],
+        programUrl: `https://www.coursera.org/specializations/${spec.slug}`,
+      };
+    },
+    24 * 60 * 60
+  );
 }
 
+// Keep for backward compat with tests that import these
 export async function getMultipleCourseDetails(
   courseraClient: CourseraClient,
   cache: CacheService,
   courseIds: string[]
-): Promise<Course[]> {
-  try {
-    logger.info('Fetching details for multiple courses', { count: courseIds.length });
-
-    const courses = await Promise.all(
-      courseIds.map((id) => getCourseDetails(courseraClient, cache, id))
-    );
-
-    logger.info('Multiple course details fetched', { count: courses.length });
-    return courses;
-  } catch (error) {
-    logger.error('Failed to fetch multiple course details', {
-      count: courseIds.length,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw error;
-  }
+): Promise<Record<string, unknown>[]> {
+  return Promise.all(courseIds.map((id) => getCourseDetails(courseraClient, cache, id)));
 }
 
 export async function getMultipleProgramDetails(
   courseraClient: CourseraClient,
   cache: CacheService,
   programIds: string[]
-): Promise<Program[]> {
-  try {
-    logger.info('Fetching details for multiple programs', { count: programIds.length });
-
-    const programs = await Promise.all(
-      programIds.map((id) => getProgramDetails(courseraClient, cache, id))
-    );
-
-    logger.info('Multiple program details fetched', { count: programs.length });
-    return programs;
-  } catch (error) {
-    logger.error('Failed to fetch multiple program details', {
-      count: programIds.length,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw error;
-  }
+): Promise<Record<string, unknown>[]> {
+  return Promise.all(programIds.map((id) => getProgramDetails(courseraClient, cache, id)));
 }
