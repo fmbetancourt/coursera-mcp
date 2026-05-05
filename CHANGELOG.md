@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.1](https://github.com/fmbetancourt/coursera-mcp/compare/v1.3.0...v1.3.1) (2026-05-05)
+
+
+### Bug Fixes
+
+* use absolute www.coursera.org URLs for all private API calls ([cb583c8](https://github.com/fmbetancourt/coursera-mcp/commit/cb583c84a2f6543f22e3ca5db39bef0a5b9d677b))
+
 # [1.3.0](https://github.com/fmbetancourt/coursera-mcp/compare/v1.2.0...v1.3.0) (2026-05-05)
 
 
