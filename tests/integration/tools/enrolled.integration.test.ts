@@ -70,7 +70,7 @@ describe('Integration: Enrolled Courses Tools', () => {
 
   describe('getEnrolledCourses', () => {
     it('should fetch and parse enrolled courses from memberships API', async () => {
-      mockClient.setMockResponse('/api/memberships.v1', mockMembershipsResponse);
+      mockClient.setMockResponse('https://www.coursera.org/api/memberships.v1', mockMembershipsResponse);
 
       const result = await getEnrolledCourses(mockClient, cache, testUserId);
 
@@ -84,7 +84,7 @@ describe('Integration: Enrolled Courses Tools', () => {
     });
 
     it('should count completed courses correctly', async () => {
-      mockClient.setMockResponse('/api/memberships.v1', mockMembershipsResponse);
+      mockClient.setMockResponse('https://www.coursera.org/api/memberships.v1', mockMembershipsResponse);
 
       const result = await getEnrolledCourses(mockClient, cache, testUserId);
 
@@ -93,7 +93,7 @@ describe('Integration: Enrolled Courses Tools', () => {
     });
 
     it('should use 1-hour cache TTL for private data', async () => {
-      mockClient.setMockResponse('/api/memberships.v1', mockMembershipsResponse);
+      mockClient.setMockResponse('https://www.coursera.org/api/memberships.v1', mockMembershipsResponse);
 
       await getEnrolledCourses(mockClient, cache, testUserId);
 
@@ -109,12 +109,12 @@ describe('Integration: Enrolled Courses Tools', () => {
         paging: { total: 1 },
       };
 
-      mockClient.setMockResponse('/api/memberships.v1', mockMembershipsResponse);
+      mockClient.setMockResponse('https://www.coursera.org/api/memberships.v1', mockMembershipsResponse);
 
       await getEnrolledCourses(mockClient, cache, testUserId);
 
       // Swap mock response for second user
-      mockClient.setMockResponse('/api/memberships.v1', otherResponse);
+      mockClient.setMockResponse('https://www.coursera.org/api/memberships.v1', otherResponse);
       const result2 = await getEnrolledCourses(mockClient, cache, anotherUserId);
 
       expect(result2.courses[0].courseId).toBe('other-course');
@@ -142,7 +142,7 @@ describe('Integration: Enrolled Courses Tools', () => {
     });
 
     it('should handle empty enrolled courses', async () => {
-      mockClient.setMockResponse('/api/memberships.v1', {
+      mockClient.setMockResponse('https://www.coursera.org/api/memberships.v1', {
         elements: [],
         paging: { total: 0 },
       });
@@ -159,7 +159,7 @@ describe('Integration: Enrolled Courses Tools', () => {
 
     it('should fetch progress from opencourse progressV2 endpoint', async () => {
       mockClient.setMockResponse(
-        `/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
+        `https://www.coursera.org/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
         makeProgressResponse(30, 40)
       );
 
@@ -175,7 +175,7 @@ describe('Integration: Enrolled Courses Tools', () => {
 
     it('should calculate percent correctly', async () => {
       mockClient.setMockResponse(
-        `/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
+        `https://www.coursera.org/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
         makeProgressResponse(1, 4)
       );
 
@@ -185,7 +185,7 @@ describe('Integration: Enrolled Courses Tools', () => {
 
     it('should return 0 percent when no items completed', async () => {
       mockClient.setMockResponse(
-        `/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
+        `https://www.coursera.org/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
         makeProgressResponse(0, 10)
       );
 
@@ -195,7 +195,7 @@ describe('Integration: Enrolled Courses Tools', () => {
 
     it('should include userId and courseId in cache key', async () => {
       mockClient.setMockResponse(
-        `/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
+        `https://www.coursera.org/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
         makeProgressResponse(5, 10)
       );
 
@@ -226,7 +226,7 @@ describe('Integration: Enrolled Courses Tools', () => {
 
     it('should handle missing progressSummary gracefully', async () => {
       mockClient.setMockResponse(
-        `/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
+        `https://www.coursera.org/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
         {}
       );
 
@@ -240,11 +240,11 @@ describe('Integration: Enrolled Courses Tools', () => {
       const course2 = 'data-science-101';
 
       mockClient.setMockResponse(
-        `/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
+        `https://www.coursera.org/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
         makeProgressResponse(20, 40)
       );
       mockClient.setMockResponse(
-        `/api/opencourse.v1/user/${testUserId}/course/${course2}/progressV2`,
+        `https://www.coursera.org/api/opencourse.v1/user/${testUserId}/course/${course2}/progressV2`,
         makeProgressResponse(5, 40)
       );
 
@@ -257,7 +257,7 @@ describe('Integration: Enrolled Courses Tools', () => {
 
     it('should throw error when API returns null', async () => {
       mockClient.setMockResponse(
-        `/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
+        `https://www.coursera.org/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
         null
       );
 
@@ -276,7 +276,7 @@ describe('Integration: Enrolled Courses Tools', () => {
 
       courseIds.forEach((id, index) => {
         mockClient.setMockResponse(
-          `/api/opencourse.v1/user/${testUserId}/course/${id}/progressV2`,
+          `https://www.coursera.org/api/opencourse.v1/user/${testUserId}/course/${id}/progressV2`,
           makeProgressResponse((index + 1) * 10, 40)
         );
       });
@@ -307,7 +307,7 @@ describe('Integration: Enrolled Courses Tools', () => {
 
   describe('Stale-While-Revalidate Pattern', () => {
     it('should serve cached data on second request', async () => {
-      mockClient.setMockResponse('/api/memberships.v1', mockMembershipsResponse);
+      mockClient.setMockResponse('https://www.coursera.org/api/memberships.v1', mockMembershipsResponse);
 
       const result1 = await getEnrolledCourses(mockClient, cache, testUserId);
       const result2 = await getEnrolledCourses(mockClient, cache, testUserId);
@@ -318,7 +318,7 @@ describe('Integration: Enrolled Courses Tools', () => {
     it('should maintain progress data consistency across calls', async () => {
       const courseId = 'python-basics';
       mockClient.setMockResponse(
-        `/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
+        `https://www.coursera.org/api/opencourse.v1/user/${testUserId}/course/${courseId}/progressV2`,
         makeProgressResponse(18, 24)
       );
 

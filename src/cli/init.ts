@@ -37,7 +37,8 @@ export async function runInitCLI(): Promise<void> {
   }
 
   const sessionsPath = path.join(process.env.HOME ?? '~', '.coursera-mcp', 'sessions.json');
-  const client = new CourseraClient();
+  // Private Coursera API (/api/users/v1/me) lives on www.coursera.org, not api.coursera.org
+  const client = new CourseraClient('https://www.coursera.org');
   const authService = new AuthService(client, masterPassword, sessionsPath);
 
   try {

@@ -65,7 +65,7 @@ export async function getEnrolledCourses(
     cacheKey,
     async () => {
       const response = await courseraClient.get<MembershipsResponse>(
-        '/api/memberships.v1?q=me&includes=courseId,grade&fields=courseId,enrolledTimestamp,lastActivityTimestamp,grade&limit=100'
+        'https://www.coursera.org/api/memberships.v1?q=me&includes=courseId,grade&fields=courseId,enrolledTimestamp,lastActivityTimestamp,grade&limit=100'
       );
 
       if (!response) throw new Error('Failed to fetch enrollments from Coursera');
@@ -111,7 +111,7 @@ export async function getProgress(
     cacheKey,
     async () => {
       const response = await courseraClient.get<{ progressSummary?: CourseProgressV2['progressSummary'] }>(
-        `/api/opencourse.v1/user/${encodeURIComponent(userId)}/course/${encodeURIComponent(courseId)}/progressV2?fields=progressSummary`
+        `https://www.coursera.org/api/opencourse.v1/user/${encodeURIComponent(userId)}/course/${encodeURIComponent(courseId)}/progressV2?fields=progressSummary`
       );
 
       if (!response) throw new Error('Failed to fetch progress from Coursera');

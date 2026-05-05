@@ -110,7 +110,7 @@ describe('Integration: Recommendations Tool', () => {
     mockClient = new MockCourseraClient();
     mockCatalog = new MockCatalogIndex(mockCatalogCourses);
     // Set up memberships mock (used by getEnrolledCourses inside getRecommendations)
-    mockClient.setMockResponse('/api/memberships.v1', enrolledMemberships);
+    mockClient.setMockResponse('https://www.coursera.org/api/memberships.v1', enrolledMemberships);
   });
 
   afterEach(() => {
@@ -154,7 +154,7 @@ describe('Integration: Recommendations Tool', () => {
     });
 
     it('should return empty recommendations when no enrollments', async () => {
-      mockClient.setMockResponse('/api/memberships.v1', { elements: [], paging: { total: 0 } });
+      mockClient.setMockResponse('https://www.coursera.org/api/memberships.v1', { elements: [], paging: { total: 0 } });
 
       const result = await getRecommendations(mockClient, cache, mockCatalog, testUserId);
 

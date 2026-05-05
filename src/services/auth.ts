@@ -43,7 +43,7 @@ export class AuthService {
     try {
       const response = await this.courseraClient.get<{
         elements?: Array<{ id: string; fullName?: string; externalId?: string }>;
-      }>('/api/users/v1/me?fields=id,fullName,externalId');
+      }>('https://www.coursera.org/api/users/v1/me?fields=id,fullName,externalId');
 
       const user = response?.elements?.[0];
       if (!user?.id) {
