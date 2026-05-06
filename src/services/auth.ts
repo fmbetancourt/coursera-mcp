@@ -41,9 +41,10 @@ export class AuthService {
   async validateCauthCookie(cauthCookie: string): Promise<{ userId: string; displayName: string }> {
     this.courseraClient.setCauthCookie(cauthCookie);
     try {
+      // Coursera uses ?q=me pattern, not /me path alias
       const response = await this.courseraClient.get<{
         elements?: Array<{ id: string; fullName?: string; externalId?: string }>;
-      }>('https://www.coursera.org/api/users/v1/me?fields=id,fullName,externalId');
+      }>('https://www.coursera.org/api/users/v1?q=me&fields=id,fullName,externalId');
 
       const user = response?.elements?.[0];
       if (!user?.id) {
