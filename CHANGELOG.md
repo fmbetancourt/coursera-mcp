@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.3](https://github.com/fmbetancourt/coursera-mcp/compare/v1.3.2...v1.3.3) (2026-05-06)
+
+
+### Bug Fixes
+
+* validate CAUTH cookie via memberships API instead of users/v1 ([9aa76e5](https://github.com/fmbetancourt/coursera-mcp/commit/9aa76e523309672d6b477ce5926fe7095adfd7f9))
+
 ## [1.3.2](https://github.com/fmbetancourt/coursera-mcp/compare/v1.3.1...v1.3.2) (2026-05-06)
 
 
