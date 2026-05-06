@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.2](https://github.com/fmbetancourt/coursera-mcp/compare/v1.3.1...v1.3.2) (2026-05-06)
+
+
+### Bug Fixes
+
+* use ?q=me pattern for Coursera users API (not /me path) ([031b6f1](https://github.com/fmbetancourt/coursera-mcp/commit/031b6f1b44074668337a89ada5c2b946b5a2e197))
+
 ## [1.3.1](https://github.com/fmbetancourt/coursera-mcp/compare/v1.3.0...v1.3.1) (2026-05-05)
 
 
