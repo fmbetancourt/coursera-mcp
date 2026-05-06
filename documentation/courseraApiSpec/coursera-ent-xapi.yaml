@@ -1,0 +1,377 @@
+openapi: 3.0.1
+info:
+  title: Coursera xAPI Integration
+  version: v1
+  description: |
+  
+    # Overview
+    xAPI (Experience API) is a widely adopted standard for e-learning that enables data about learners’ activity to be collected, tracked, and shared across multiple learning platforms. 
+    
+    Through the xAPI integration, Coursera sends learner activities—like content progress, completion, and grades—to third-party Learning Management Systems (LMS) and Learning Experience Platforms (LXP).
+
+    This page provides:
+    - A detailed [integration and configuration guide](#integration-and-configuration-guidee) to help onboard any new LMS or LXP to Coursera’s xAPI-enabled ecosystem.
+    - An overview of our supported [integration providers and content types.](#integration-providers-and-content-types)
+    - An overview of the [xAPI statements supported by Coursera](#example-xapi-statement).
+    
+    <a id="integration-and-configuration-guide"></a>
+    # Integration and configuration guide
+
+    You can configure the xAPI integration within the Coursera admin dashboard. However, you’ll need to complete two actions within your learning platform first.
+
+    ### To configure the integration, there are three steps:
+
+    1. [**Register Coursera as an API application in your learning platform**](#step-1)
+       - Complete this in your LMS/LXP.
+    
+    2. [**Procure your OAuth token endpoint and xAPI statement endpoint**](#step-2)
+       - Find this info within your LMS/LXP.
+
+    3. [**Configure the xAPI integration in the Coursera dashboard**](#step-3)
+       - Complete this in the Coursera admin dashboard.
+
+    **Note:** Only [organization administrators](https://www.coursera.support/s/article/admin-000002070-Admin-roles-and-permissions?language=en_US) can access the configuration tool in the admin dashboard.
+    
+    <a id="step-1"></a>
+    ## Step 1: Register Coursera as an API application in your learning platform
+
+    These are general steps on setting up an API application, and the precise steps for each system may vary. Please consult with your LMS/LXP administrator to complete this step for your instance.
+    
+    In your learning platform, access the administration module to set up an xAPI integration. You should find an option to register a client application and generate a **client ID** and **client secret** for the API application. You’ll provide these two values during configuration in the Coursera admin dashboard.
+    
+    **Important:** When creating the client credentials, ensure the access scope is set to **xapi: write**. Without this scope, xAPI statements sent from Coursera to the LMS/LXP will fail.
+    
+    <a id="step-2"></a>
+    ## Step 2: Procure the OAuth token endpoint and xAPI statement endpoint
+    Next, you’ll need to gather the OAuth token endpoint (OAuth server URL) and the xAPI statement endpoint (Tracking URL). These endpoints are in URL format and are provided by your learning platform. Please ensure the endpoint URLs are accurate for your learning platform’s instance. 
+
+    These URLs may look different from system to system, but here’s an example:
+    - **OAuth server URL:** https://xapi.us.myworkdaymedia.com/v1/auth
+    - **Tracking URL:** https://xapi.us.myworkdaymedia.com/v1/tracking
+    
+    
+    This is how these endpoints are used in the xAPI process:
+    1. Coursera provides the OAuth server URL (OAuth token endpoint) with the **client ID** and **client secret**. This authenticates Coursera with your learning platform.
+    2. After authentication, Coursera sends a completed xAPI statement to the Tracking URL (xAPI statement endpoint).
+
+
+    <a id="step-3"></a>
+    ## Step 3: Configure xAPI integration in the Coursera dashboard
+    
+    You’re now ready to set up the integration in the Coursera admin dashboard. You must be an [organization admin](https://www.coursera.support/s/article/admin-000002070-Admin-roles-and-permissions?language=en_US) to access the Settings menu and configuration tool.
+    
+    Before you begin, make sure you have this information from your LMS/LXP:
+
+    - Client ID
+    - Client secret
+    - OAuth Server URL
+    - Tracking URL
+    
+    ### To access the xAPI configuration tool in the Coursera dashboard:
+    
+    1. In the top-right corner of the admin dashboard, click your organization name.
+    
+    2. From the drop-down menu, click **Settings**. 
+    
+    3. On the Settings page, click the **xAPI configuration** tab.
+    
+    4. Click the blue **Configure xAPI** button to open the tool.
+        - If you don’t see this option, integrations aren’t set up for your account yet. Contact your account manager for more information.
+
+    ![Config](https://apigee-367218-testingdeveloperportal.apigee.io/files/xAPI_integration_setting.png)
+
+    Once you’ve opened the tool, you’ll just need to fill in a few fields to finish the configuration.
+
+    ### To complete the configuration setup:
+    1. Select your xAPI provider format (it’s recommended you choose ‘Standard xAPI’).
+        - Standard xAPI can be used with almost any learning platform. This allows you to track both course activities and more granular course item activities.
+        - If you use one of these platforms, you **must** choose the platform-specific provider: EdCast, Degreed, and Workday.
+    
+    2. Enter the values you got from your learning platform: Client ID, client secret, and endpoint URLs.
+
+    3. Choose xAPI actor configuration (it’s recommended you choose ‘Mbox’).
+        - This determines how learners are identified in the xAPI statements. The simplest option is to identify learners by their email addresses via Mbox.
+      
+        - You can also choose ‘Account’ to map by learner name and platform URL. This requires that you add [External ID attributes](https://www.coursera.support/s/article/admin-000002191-Manage-learner-profile-data?language=en_US) for all your learners.
+    
+    4. After you’ve filled all required fields, click Configure API to finish setup.
+        - If you choose ‘Standard xAPI’ as your provider, you’ll see a final screen asking you to choose additional reporting options. You can select whether or not you want item-level reporting, and if you want to include non-graded items.
+    
+    
+    <a id="integration-providers-and-content-types"></a>
+    # Integration providers and content types
+    
+    Coursera xAPI integration delivers real-time learner data to your LMS or LXP, enabling comprehensive tracking across different content types.
+    
+    We support these xAPI integration providers:
+
+    - Degreed
+    - EdCast
+    - Workday
+    - Standard xAPI (used for all other platforms)
+
+    All providers except Degreed report on two verbs: “Progressed” and “Completion”. Degreed only reports completions.
+
+    | Verb | Standard xAPI | Degreed | EdCast | Workday 
+    |------|-------------|-------------|-------------|-------------|
+    | Course updates | ✓ | X | ✓ | ✓ | 
+    | Video updates | ✓ | ✓ | ✓ | ✓ |
+    | Course item updates | ✓ | ✓ | ✓ | ✓ |
+    
+    ## Supported content in xAPI
+    By default, all xAPI integrations receive a report that tracks when a learner completes a course, as well as the final course grade after completion. Most provider reports—excluding Workday—also include video clips activity.
+    
+    Additionally, Standard xAPI integrations can choose to track activity for both graded and non-graded course items. For graded items such as quizzes, you’ll also receive the grade earned for each respective item.
+
+    Graded and non-graded course item activities are sent in separate reports. During the last phase of configuration, you’ll be able to customize which of the item-level reports you want to receive.
+    
+    **Note:** Course items can’t be tracked with Degreed, EdCast, or Workday integrations.
+    
+    
+    These are all the types of content we support for xAPI:
+     - **Course:** A course on Coursera is defined as a package of videos, assessments, and quizzes.
+     - **Video clips:** A video clip is a course lecture that learners can watch without enrolling in the full course. Video clips are marked as complete once the learner has watched 90% of the video.
+        - Not available for Workday.
+     - **Course item:** An item refers to any individual piece of content or activity that is included in a course, such as quizzes, assignments, or Lab activities. These items can be graded items or non-graded items.
+        - Not available for Degreed, EdCast, or Workday.
+
+    
+    | Type | Standard xAPI | Degreed | EdCast | Workday | 
+    |------------|------------|------------|------------|------------|
+    | Course updates | ✓ | ✓ |  ✓ | ✓ | 
+    | Video updates | ✓ | ✓ |  ✓ | X |
+    | Course item updates | ✓ | X |  X | X |
+
+
+    <a id="example-xapi-statement"></a>
+    # Example xAPI statement
+        {
+          "id": "<Generate UUID for xAPI Statement>",
+          "timestamp": "timestamp of when the learning activity occured",
+          "actor": {
+            "objectType": "Agent",
+            "mbox": "email address of learner"
+          },
+          "verb": {
+            "id": "http://adlnet.gov/expapi/verbs/progressed",
+            "display": {
+              "en-US": "PROGRESSED" // {PROGRESSED or COMPLETED}
+            }
+          },
+          "object": {
+            "id": "COURSERA_URL/{courseId} || COURSERA_URL/course/{courseId}/video/{videoId} || COURSERA_URL/course/{courseId}/item/{itemId}" ,
+            "definition": {
+              "type": "http://adlnet.gov/expapi/activities/course|video|item"
+            },
+            "objectType": "Activity"
+          },
+          "result": {
+            "score": {
+              "scaled": 0.08 {Scaled Score}
+            },
+            "success": false, {Success Status}
+            "completion": false {Completion Status}
+          },
+          "context": {
+            "contextActivities": {
+              "parent": {
+                "id": "parentId"
+              },
+              "grouping": {
+                "id": "groupingId"
+              }
+            }
+            "http://coursera.org/xapi/extensions/courseId": "courseId",
+            "http://coursera.org/xapi/extensions/itemType": "itemType",
+            "http://coursera.org/xapi/extensions/programId": "programId"
+          },
+          "stored": "2024-10-30T16:46:25.958Z",
+          "authority": {
+            "objectType": "Agent",
+            "name": "COURSERA",
+            "mbox": "mailto:noreply@coursera.org"
+          }
+        }
+      
+    For more detailed integration support, please contact our integration team at <a href="mailto:solutionarchitects@coursera.org">solutionarchitects@coursera.org</a>.
+
+paths: {}
+
+components:
+  schemas:
+    Statement:
+      type: object
+      description: The following statements are supported by Coursera to report a learner's progress and completion of a course/video/item via xAPI integration
+        - Progress event
+        - Completion event
+
+        As these events occur, Coursera will send the corresponding verbs in real-time to the LXP system.
+
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "b90f52c2-1571-4bc1-9be6-5e5e4acc7894"
+          description: Unique identifier for the statement
+        timestamp:
+          type: string
+          format: date-time
+          description: Time when the statement was generated
+        actor:
+          $ref: '#/components/schemas/Actor'
+        verb:
+          $ref: '#/components/schemas/Verb'
+        object:
+          $ref: '#/components/schemas/Object'
+        result:
+          $ref: '#/components/schemas/Result'
+        context:
+          $ref: '#/components/schemas/Context'
+        stored:
+          type: string
+          format: date-time
+          description: Time when the statement was stored in the system
+        authority:
+          $ref: '#/components/schemas/Authority'
+
+    Actor:
+      type: object
+      description: |
+        The agent (usually a user) who performed the activity
+
+        **Mbox** : Identifies the actor's email address. **Default**
+        
+        **Account** : Uses Coursera "External ID" value assigned to the actor.
+
+      oneOf:
+        - type: object
+          properties:
+            mbox:
+              type: string
+              format: email
+              description: The email address of the actor'
+              example: "anonymous@coursera.org"
+            objectType:
+              type: string
+              enum: [ "Agent" ]
+              description: The type of the actor, always "Agent" for individual users
+        - type: object
+          properties:
+            account:
+              type: object
+              properties:
+                homePage:
+                  type: string
+                  format: uri
+                  description: The base URL of the platform where the account is registered
+                  example: "http://www.coursera.org"
+                name:
+                  type: string
+                  description: The unique identifier for the user within the platform
+                  example: "sallyglider434"
+            objectType:
+              type: string
+              enum: [ "Agent" ]
+
+
+    Verb:
+      type: object
+      description: |
+        URI that describes an action taken by an actor on an object. The completed and progressed verbs are used in xAPI statements to report a learner's completion of a course/video or progress within a course/video.
+
+        Supported Verbs: **PROGRESSED** / **COMPLETED**
+      properties:
+        id:
+          type: string
+          description: The URI identifying the verb
+          example: "http://adlnet.gov/expapi/verbs/progressed"
+        display:
+          type: object
+          description: Language-specific display names for the verb
+          additionalProperties:
+            type: string
+          example:
+            en-US: "PROGRESSED"
+
+    Object:
+      type: object
+      description: The activity or item with which the actor interacted
+      properties:
+        id:
+          type: IRI
+          description: Product ID of the activity content
+          example: "https://api.coursera.org/api/rest/v1/xapi/content/course/{courseId}"
+        definition:
+          type: object
+          properties:
+            type:
+              type: string
+              description: Activity type (Course/Video/Item)
+              example: "http://adlnet.gov/expapi/activities/course"
+        objectType:
+          type: string
+          example: "Activity"
+
+    Result:
+      type: object
+      description: Measured outcome of the activity
+      properties:
+        score:
+          type: object
+          properties:
+            scaled:
+              description: Current overall grade scaled 0 to 1
+              type: number
+              example: 0.25
+        success:
+          description: Success status of the attempted activity
+          type: boolean
+          example: true
+        completion:
+          description: Activity status if/was already completed
+          type: boolean
+          example: false
+
+    Context:
+      type: object
+      description: Contextual information about the activity
+      properties:
+        contextActivities:
+          type: object
+          properties:
+            parent:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: ParentId associated with content if any
+                  example: "parentId"
+            grouping:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: GroupingId associated with content if any
+                  example: "groupingId"
+        courseId:
+          description: CourseId of the content in reference
+          type: string
+          example: "http://coursera.org/xapi/extensions/courseId"
+        itemType:
+          description: ItemType of the Item in reference (For Item-level Update Statement)
+          type: boolean
+          example: "http://coursera.org/xapi/extensions/itemType"  
+        programId:
+          description: ProgramId of the Program in reference
+          type: string
+          example: "http://coursera.org/xapi/extensions/programId"        
+          
+
+    Authority:
+      type: object
+      description: The authority responsible for authenticating the user, capturing learner events and generating the xAPI Statement.
+      properties:
+        name:
+          type: string
+          example: "COURSERA"
+          
