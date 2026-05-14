@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+# [1.4.0](https://github.com/fmbetancourt/coursera-mcp/compare/v1.3.4...v1.4.0) (2026-05-14)
+
+
+### Features
+
+* add Coursera for Business (enterprise) mode ([28bb887](https://github.com/fmbetancourt/coursera-mcp/commit/28bb887236597307a45c0d838bb066099283ddb4))
+
 ## [1.3.4](https://github.com/fmbetancourt/coursera-mcp/compare/v1.3.3...v1.3.4) (2026-05-14)
 
 
