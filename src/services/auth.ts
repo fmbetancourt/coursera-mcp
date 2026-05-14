@@ -41,26 +41,20 @@ export class AuthService {
   async validateCauthCookie(cauthCookie: string): Promise<{ userId: string; displayName: string }> {
     this.courseraClient.setCauthCookie(cauthCookie);
     try {
-      // Validate via memberships — the most reliable consumer API endpoint with CAUTH.
-      // Element IDs have format "userId~courseId", so we extract userId from the first one.
+      // adminUserPermissions.v1?q=my works for all accounts regardless of enrollment status
+      // and consistently returns the numeric userId in elements[0].id
       const response = await this.courseraClient.get<{
         elements?: Array<{ id: string }>;
-      }>('https://www.coursera.org/api/memberships.v1?q=me&fields=id&limit=1');
+      }>('https://www.coursera.org/api/adminUserPermissions.v1?q=my');
 
       if (!response) {
         throw new Error('Could not reach Coursera API — check your network connection');
       }
 
-      const firstId = response.elements?.[0]?.id;
-      if (!firstId) {
-        throw new Error(
-          'CAUTH cookie appears valid but no course enrollments found.\n' +
-          'Enroll in at least one Coursera course and run "coursera-mcp init" again.'
-        );
+      const userId = response.elements?.[0]?.id;
+      if (!userId) {
+        throw new Error('CAUTH cookie may be invalid or expired — could not retrieve user ID');
       }
-
-      const userId = firstId.split('~')[0];
-      if (!userId) throw new Error('Unexpected membership ID format received from Coursera');
 
       return { userId, displayName: 'Coursera User' };
     } finally {
