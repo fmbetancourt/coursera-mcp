@@ -15,8 +15,11 @@ import { searchCourses, searchPrograms } from './tools/search.js';
 import { getCourseDetails, getProgramDetails } from './tools/details.js';
 import { getEnrolledCourses, getProgress } from './tools/enrolled.js';
 import { getRecommendations } from './tools/recommendations.js';
+import { getEnterprisePrograms, getEnterpriseContents, getEnterpriseEnrollments } from './tools/enterprise.js';
 import { requireAuth, AuthenticationError } from './middleware/auth.js';
 import { runInitCLI } from './cli/init.js';
+import { runInitEnterpriseCLI } from './cli/initEnterprise.js';
+import { EnterpriseAuthService } from './services/enterpriseAuth.js';
 import path from 'path';
 
 // Initialize services
@@ -26,6 +29,7 @@ const cache = new CacheService(cacheDir);
 const masterPassword = process.env.COURSERA_MASTER_PASSWORD || 'default-master-key';
 const authService = new AuthService(courseraClient, masterPassword);
 const catalogIndex = new CatalogIndex(courseraClient);
+const enterpriseAuth = new EnterpriseAuthService(masterPassword);
 
 logger.info('Coursera MCP services initialized');
 
@@ -137,6 +141,43 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         },
       },
     },
+    {
+      name: 'get_enterprise_programs',
+      description: 'Get learning programs (paths) configured in your Coursera for Business organization (requires enterprise credentials)',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          limit: { type: 'number', description: 'Max programs to return (default: 100)' },
+        },
+      },
+    },
+    {
+      name: 'get_enterprise_contents',
+      description: 'Get the catalog of courses and specializations available in your Coursera for Business organization (requires enterprise credentials)',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          contentType: {
+            type: 'string',
+            enum: ['Course', 'Specialization', 'Video'],
+            description: 'Filter by content type',
+          },
+          limit: { type: 'number', description: 'Max items to return (default: 100)' },
+        },
+      },
+    },
+    {
+      name: 'get_enterprise_enrollments',
+      description: 'Get enrollment and progress reports for your Coursera for Business organization (requires enterprise credentials)',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          programId: { type: 'string', description: 'Filter by program ID' },
+          externalId: { type: 'string', description: 'Filter by learner external ID or email' },
+          limit: { type: 'number', description: 'Max records to return (default: 100)' },
+        },
+      },
+    },
   ],
 }));
 
@@ -186,6 +227,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         result = await getRecommendations(courseraClient, cache, catalogIndex, context.userId, args as { limit?: number });
         break;
       }
+
+      case 'get_enterprise_programs':
+        result = await getEnterprisePrograms(enterpriseAuth, cache, args as { limit?: number });
+        break;
+
+      case 'get_enterprise_contents':
+        result = await getEnterpriseContents(enterpriseAuth, cache, args as { contentType?: string; limit?: number });
+        break;
+
+      case 'get_enterprise_enrollments':
+        result = await getEnterpriseEnrollments(enterpriseAuth, cache, args as { programId?: string; externalId?: string; limit?: number });
+        break;
 
       default:
         throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
@@ -251,6 +304,10 @@ export { courseraClient, cache, authService };
 async function main(): Promise<void> {
   if (process.argv[2] === 'init') {
     await runInitCLI();
+    return;
+  }
+  if (process.argv[2] === 'init-enterprise') {
+    await runInitEnterpriseCLI();
     return;
   }
   const transport = new StdioServerTransport();
