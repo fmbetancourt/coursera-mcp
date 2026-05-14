@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.4](https://github.com/fmbetancourt/coursera-mcp/compare/v1.3.3...v1.3.4) (2026-05-14)
+
+
+### Bug Fixes
+
+* use adminUserPermissions.v1 to resolve userId during init ([c5afddf](https://github.com/fmbetancourt/coursera-mcp/commit/c5afddfdcceae1aca6e245ce76af17a593c10f33))
+
 ## [1.3.3](https://github.com/fmbetancourt/coursera-mcp/compare/v1.3.2...v1.3.3) (2026-05-06)
 
 
